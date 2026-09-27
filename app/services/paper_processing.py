@@ -7,8 +7,19 @@ from pathlib import Path
 import sqlite3
 
 from app.database.connection import connect_database
-from app.database.repository import get_paper, save_pages_and_status, set_paper_status
-from app.services.pdf_processor import PdfProcessingError, extract_pdf_pages
+from app.database.repository import (
+    get_paper,
+    get_paper_pages,
+    save_pages_and_status,
+    save_sections_and_status,
+    set_paper_status,
+)
+from app.services.pdf_processor import (
+    ExtractedPage,
+    PdfProcessingError,
+    extract_pdf_pages,
+)
+from app.services.section_detector import detect_sections
 
 logger = logging.getLogger(__name__)
 
@@ -72,5 +83,48 @@ def process_paper_text(
             "PDF_EXTRACTION_COMPLETED",
             extra={"paper_id": paper_id, "page_count": len(pages)},
         )
+
+        # TEXT_EXTRACTED is committed above before section detection starts, so
+        # a detector or section-write failure cannot discard successful pages.
+        try:
+            set_paper_status(connection, paper_id, "DETECTING_SECTIONS")
+            stored_pages = get_paper_pages(connection, paper_id)
+            sections = detect_sections(
+                [
+                    ExtractedPage(
+                        page_number=row["page_number"], text=row["text"]
+                    )
+                    for row in stored_pages
+                ]
+            )
+            save_sections_and_status(
+                connection,
+                paper_id,
+                (
+                    (
+                        section.section_name,
+                        section.start_page,
+                        section.end_page,
+                        section.content,
+                    )
+                    for section in sections
+                ),
+            )
+            logger.info(
+                "SECTION_DETECTION_COMPLETED",
+                extra={"paper_id": paper_id, "sections_found": len(sections)},
+            )
+        except Exception:
+            connection.rollback()
+            logger.exception(
+                "SECTION_DETECTION_FAILED", extra={"paper_id": paper_id}
+            )
+            try:
+                set_paper_status(connection, paper_id, "TEXT_EXTRACTED")
+            except sqlite3.Error:
+                logger.exception(
+                    "SECTION_FAILURE_STATE_WRITE_FAILED",
+                    extra={"paper_id": paper_id},
+                )
     finally:
         connection.close()

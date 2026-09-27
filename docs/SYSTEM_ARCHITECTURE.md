@@ -44,8 +44,10 @@ does not change the paper's own `status`.
 ## Component responsibilities
 
 - **PDF Processing** (`app/services/pdf_processor.py`): file validation, hash
-  computation, page-preserving text extraction, section detection. Pure
-  deterministic code. No AI calls.
+  computation, and page-preserving text extraction. **Section Detector**
+  (`app/services/section_detector.py`) independently matches standalone
+  headings against the persisted page text and returns page-aware sections.
+  Both are deterministic and make no AI calls.
 - **AIExtractionService** (`app/services/ai_extraction.py`): thin orchestration
   layer that calls the configured provider adapter per extraction group,
   returns raw JSON-like dicts. Never touches the database directly.
@@ -77,3 +79,6 @@ be silently reordered.
 
 - 2026-09-27: Added `TEXT_EXTRACTED` between text extraction and section
   detection as an observable checkpoint for incremental implementation.
+- 2026-09-27: Added a deterministic section-detector service. The processing
+  service reads persisted page text and stores its output in `paper_sections`;
+  the workflow remains at `DETECTING_SECTIONS` until AI processing exists.

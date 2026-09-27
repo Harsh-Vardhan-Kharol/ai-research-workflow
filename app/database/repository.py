@@ -1,4 +1,4 @@
-"""SQL access for paper records and their page-preserving text."""
+"""SQL access for paper records, page text, and detected sections."""
 
 from __future__ import annotations
 
@@ -44,6 +44,18 @@ def initialize_schema(connection: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS idx_paper_pages_paper_id
             ON paper_pages(paper_id);
+
+        CREATE TABLE IF NOT EXISTS paper_sections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paper_id INTEGER NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
+            section_name TEXT NOT NULL,
+            start_page INTEGER NOT NULL CHECK (start_page > 0),
+            end_page INTEGER NOT NULL CHECK (end_page >= start_page),
+            content TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_paper_sections_paper_id
+            ON paper_sections(paper_id);
         """
     )
     connection.commit()
@@ -122,6 +134,46 @@ def get_paper_pages(
         connection.execute(
             """SELECT page_number, text FROM paper_pages
                WHERE paper_id = ? ORDER BY page_number""",
+            (paper_id,),
+        ).fetchall()
+    )
+
+
+def save_sections_and_status(
+    connection: sqlite3.Connection,
+    paper_id: int,
+    sections: Iterable[tuple[str, int, int, str]],
+) -> None:
+    """Atomically replace detected sections and mark detection complete."""
+    with connection:
+        connection.execute("DELETE FROM paper_sections WHERE paper_id = ?", (paper_id,))
+        connection.executemany(
+            """INSERT INTO paper_sections
+               (paper_id, section_name, start_page, end_page, content)
+               VALUES (?, ?, ?, ?, ?)""",
+            (
+                (paper_id, name, start, end, content)
+                for name, start, end, content in sections
+            ),
+        )
+        cursor = connection.execute(
+            """UPDATE papers SET status = 'DETECTING_SECTIONS', failure_reason = NULL,
+               updated_at = ? WHERE id = ?""",
+            (_now(), paper_id),
+        )
+        if cursor.rowcount == 0:
+            raise LookupError(f"Paper {paper_id} does not exist")
+
+
+def get_paper_sections(
+    connection: sqlite3.Connection, paper_id: int
+) -> list[sqlite3.Row]:
+    """Return sections in document order, retaining the schema fields."""
+    return list(
+        connection.execute(
+            """SELECT section_name, start_page, end_page, content
+               FROM paper_sections WHERE paper_id = ?
+               ORDER BY start_page, id""",
             (paper_id,),
         ).fetchall()
     )

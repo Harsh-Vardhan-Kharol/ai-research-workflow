@@ -11,7 +11,8 @@
 | Empty PDF | PyMuPDF opens a document with zero pages | `status = FAILED`, `failure_reason = empty_pdf` | "This PDF contains no pages." | `PROCESSING_FAILED` (ERROR) |
 | Stored PDF missing | Content-addressed PDF file is absent at processing time | `status = FAILED`, `failure_reason = stored_pdf_missing` | "The stored PDF is unavailable for processing." | `PROCESSING_FAILED` (ERROR) |
 | Scanned/no extractable text | Extracted text near-empty across all pages | `status = FAILED`, `failure_reason = no_extractable_text` | "No extractable text was found (scanned PDFs are not supported)." | `PROCESSING_FAILED` (ERROR) |
-| Section detection finds nothing | No headings matched | Not a failure — fall back to whole-document extraction, flag `section_detected=false` | (no user-facing error; badge shows lower relevance) | `SECTION_DETECTION_COMPLETED` (INFO, `sections_found=0`) |
+| Section detection finds nothing | No standalone known headings matched | Not a failure — create no section rows; later extraction falls back to whole-document text and flags `section_detected=false` | No user-facing error | `SECTION_DETECTION_COMPLETED` (INFO, `sections_found=0`) |
+| Section detection or section persistence fails | Detector raises or section transaction fails | Preserve committed page text and return paper status to `TEXT_EXTRACTED`; do not fail PDF extraction | No user-facing error | `SECTION_DETECTION_FAILED` (ERROR) |
 | LLM timeout | Adapter call exceeds timeout | Retry up to `MAX_AI_RETRIES`, then fail just that extraction group | "Some fields could not be extracted; you can retry with Reanalyze." | `AI_EXTRACTION_FAILED` (ERROR, per group) |
 | LLM rate limit | Provider 429 | Exponential backoff, max 2 retries, then fail that group | same as above | `AI_EXTRACTION_FAILED` (ERROR) |
 | Invalid JSON from LLM | JSON parse fails | One repair retry with parse error included, then fail that group | same as above | `VALIDATION_FAILED` (ERROR) |

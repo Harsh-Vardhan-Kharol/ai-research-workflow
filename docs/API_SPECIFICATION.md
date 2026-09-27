@@ -26,10 +26,10 @@ Hard delete, cascades per `DATABASE_SCHEMA.md`. 204 on success.
 Triggers background processing (idempotent: if already `READY` or
 in-progress, returns 409 with current status rather than double-processing).
 - 202 -> `{ "status": "EXTRACTING_TEXT" }`
-- During the deterministic PDF phase, successful page persistence reaches
-  `TEXT_EXTRACTED`; this is an intermediate state before section detection
-  is implemented. Reprocessing a `TEXT_EXTRACTED` paper returns 409 with its
-  current status.
+- Successful page text is committed at `TEXT_EXTRACTED` before section
+  detection begins. Completed section detection leaves status at
+  `DETECTING_SECTIONS` until the later AI stage is implemented. Reprocessing
+  either state returns 409 with its current status.
 
 ### GET /papers/{paper_id}/status
 - 200 -> `{ "status": str, "failure_reason": str|null }`
@@ -82,9 +82,8 @@ value(s) and confidence.
 
 ## Deviation Log
 
-- 2026-09-27: Documented `TEXT_EXTRACTED` as the completed state of the
-  incremental page-text phase; processing remains at this checkpoint until
-  section detection is implemented.
+- 2026-09-27: Documented the section-detection checkpoint; page text remains
+  separately committed at `TEXT_EXTRACTED` before detection starts.
 
 ## Idempotency & retries
 

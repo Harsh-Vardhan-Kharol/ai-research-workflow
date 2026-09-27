@@ -5,7 +5,7 @@
 | Subsystem | Cases | Acceptance criteria |
 |---|---|---|
 | PDF parsing | valid PDF, corrupted PDF, empty-text PDF | Correct page count/text for valid; correct FAILED reason for the other two |
-| Section detection | standard headings, numbered headings, no headings, non-English-style variants | Correct section boundaries for standard cases; graceful whole-document fallback when nothing is detected |
+| Section detection | standard/variant headings, numbering, capitalization, missing sections, multi-page spans, references, malformed whitespace, body prose, no headings | Correct page-aware content boundaries; graceful whole-document fallback when nothing is detected |
 | Schema validation | valid payload, missing required field, wrong type, null-for-insufficient-evidence | Valid passes; each invalid case rejected with a specific, testable error |
 | Evidence matching | exact match, paraphrased match, no match, wrong page cited | Similarity scores fall in expected bands; wrong-page triggers fallback search |
 | Confidence calculation | boundary values at 0.449/0.45/0.749/0.75; zero-evidence case | Exact score and level per the formula in `CONFIDENCE_SYSTEM.md`; the zero-evidence-forced-LOW question from that file resolved and tested one way or the other |
@@ -14,6 +14,8 @@
 
 ## Integration tests (`tests/integration/`)
 
+- PDF -> parser -> section detection -> database: assert page text and
+  correctly bounded `paper_sections` rows persist together in the pipeline.
 - PDF -> parser -> extraction (AI calls mocked to return fixed structured
   output) -> database: assert correct rows land in `extractions`.
 - extraction -> evidence -> confidence -> database: assert the full

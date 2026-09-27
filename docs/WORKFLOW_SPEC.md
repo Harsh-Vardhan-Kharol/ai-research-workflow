@@ -25,16 +25,21 @@ across all pages. Successful page persistence ends at `TEXT_EXTRACTED`; the
 next stage is `DETECTING_SECTIONS`.
 
 ### 3. Section detection
-**Deterministic:** heading-pattern matching (case-insensitive, tolerant of
-numbering like "3. Methodology" or "III. METHOD") against a known-heading
-list (Abstract, Introduction, Related Work, Method(ology|s)?, Proposed
-Method, Experiments, Results, Discussion, Limitations, Conclusion,
-Future Work, References). Each detected heading becomes a `paper_sections`
-row spanning until the next detected heading.
+**Deterministic:** standalone, exact heading-pattern matching (case-
+insensitive, tolerant of numbering, punctuation, whitespace, and short wrapped
+headings) against known heading families: Abstract, Introduction, Related
+Work, Literature Review, Background, Methodology/Methods, Materials and
+Methods, Proposed Method, Experiments, Results, Discussion, Conclusion,
+Limitations, Future Work, References/Bibliography. Body prose is not accepted
+as a heading merely because it mentions one of these terms. Each detected
+heading becomes a `paper_sections` row spanning until the next detected
+heading, with its name, page range, and body content.
 **Fallback:** if no headings are detected, no section rows are created for
-this paper, and every extraction group falls back to whole-document
-(capped) text with `section_detected = false` — never fail the pipeline
-solely because heading detection found nothing.
+this paper and processing records `SECTION_DETECTION_COMPLETED` with
+`sections_found=0`. Later extraction groups use whole-document (capped) text
+with `section_detected = false`. Detection or section-persistence errors are
+logged and leave the successfully persisted page text intact at
+`TEXT_EXTRACTED`; section detection alone never fails PDF extraction.
 
 ### 4. AI extraction
 **Per extraction group** (see `AI_ARCHITECTURE.md` targeting table): call
@@ -94,3 +99,7 @@ High/medium confidence items start directly at `ACCEPTED` (auto-accepted per
   section detection or later stages have run. Defined “near-zero” as fewer
   than 20 non-whitespace characters to make scanned/blank PDF handling
   deterministic and testable.
+- 2026-09-27: Section detection persists sections and then leaves the paper at
+  `DETECTING_SECTIONS`, the last reached stage until AI extraction is built.
+  Successful page persistence is still separately committed at
+  `TEXT_EXTRACTED` before this stage starts.
