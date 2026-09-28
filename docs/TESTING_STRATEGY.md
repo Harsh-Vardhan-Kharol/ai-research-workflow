@@ -24,6 +24,10 @@
 - Validated extraction -> evidence mapping -> confidence scoring -> SQLite ->
   extraction API: assert deterministic score/signals/review routing persist and
   paper reaches `READY` without live model calls.
+- Pending extraction -> Accept/Edit/Reject review API -> SQLite -> extraction
+  GET: assert terminal item state, one review record, immutable AI value,
+  reviewed value/comment/timestamp, and unchanged paper status. Include
+  invalid input, duplicate review, and transaction rollback cases.
 - Failure-path integration: corrupted PDF end-to-end results in
   `status=FAILED` with the correct `failure_reason`.
 

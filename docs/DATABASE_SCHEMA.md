@@ -148,6 +148,14 @@ including score 0 and `UNAVAILABLE`/`FAILED` states.
 | review_comment | TEXT | nullable |
 | reviewed_at | TEXT | not null |
 
+Each accepted review decision is appended as a record. Review records are not
+updated or deleted by the review workflow. The API permits a decision only
+while the extraction is `PENDING_REVIEW`, so a completed decision cannot be
+submitted again through the normal workflow. `extractions.field_value` remains
+the original AI value for every action; for `EDITED`, `reviewed_value` is the
+human-reviewed value. Original evidence, confidence, and review reasons also
+remain attached to the AI extraction and are not recalculated by review.
+
 ## Deletion behavior
 
 Deleting a paper (`DELETE /api/v1/papers/{id}`) cascades to `paper_pages`,
@@ -171,3 +179,8 @@ discarding their data.
   `review_reasons` to the existing extraction row. The Phase 6 API requires
   explainable score and routing output; this avoids a redundant confidence
   table.
+- 2026-09-28: Phase 7 creates the documented `review_records` table and its
+  extraction index during schema initialization. Review decisions retain the
+  original extraction value in both `extractions.field_value` and
+  `review_records.original_value`; edited values are stored only in
+  `review_records.reviewed_value`.

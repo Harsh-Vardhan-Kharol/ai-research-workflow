@@ -122,6 +122,21 @@ def initialize_schema(connection: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS idx_evidence_extraction_id
             ON evidence(extraction_id);
+
+        CREATE TABLE IF NOT EXISTS review_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            extraction_id INTEGER NOT NULL REFERENCES extractions(id) ON DELETE CASCADE,
+            original_value TEXT NOT NULL,
+            reviewed_value TEXT,
+            review_status TEXT NOT NULL CHECK (review_status IN (
+                'ACCEPTED', 'EDITED', 'REJECTED'
+            )),
+            review_comment TEXT,
+            reviewed_at TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_review_records_extraction_id
+            ON review_records(extraction_id);
         """
     )
     # Additive migration for databases created by Phase 4/5.
@@ -399,11 +414,70 @@ def get_extraction_with_evidence(
                   x.status, x.section_detected, e.id AS evidence_id,
                   e.page_number, e.section_name,
                   e.source_text AS verified_source_text, e.evidence_score,
-                  e.page_corrected, e.match_status, e.failure_code
+                  e.page_corrected, e.match_status, e.failure_code,
+                  r.id AS review_id, r.original_value, r.reviewed_value,
+                  r.review_status, r.review_comment, r.reviewed_at
            FROM extractions AS x LEFT JOIN evidence AS e ON e.extraction_id = x.id
+           LEFT JOIN review_records AS r ON r.id = (
+               SELECT MAX(r2.id) FROM review_records AS r2
+               WHERE r2.extraction_id = x.id
+           )
            WHERE x.id = ?""",
         (extraction_id,),
     ).fetchone()
+
+
+def apply_extraction_review(
+    connection: sqlite3.Connection,
+    extraction_id: int,
+    action: str,
+    reviewed_value: str | None,
+    comment: str | None,
+) -> None:
+    """Atomically record one final review decision for a pending extraction."""
+    status_by_action = {
+        "ACCEPT": "ACCEPTED",
+        "EDIT": "EDITED",
+        "REJECT": "REJECTED",
+    }
+    review_status = status_by_action.get(action)
+    if review_status is None:
+        raise ValueError("unsupported review action")
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        extraction = connection.execute(
+            "SELECT field_value, status FROM extractions WHERE id = ?",
+            (extraction_id,),
+        ).fetchone()
+        if extraction is None:
+            raise LookupError("Extraction does not exist")
+        if extraction["status"] != "PENDING_REVIEW":
+            raise ValueError("Extraction is not pending review")
+        connection.execute(
+            """INSERT INTO review_records
+               (extraction_id, original_value, reviewed_value, review_status,
+                review_comment, reviewed_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (
+                extraction_id,
+                extraction["field_value"],
+                reviewed_value if action == "EDIT" else None,
+                review_status,
+                comment,
+                _now(),
+            ),
+        )
+        cursor = connection.execute(
+            """UPDATE extractions SET status = ?, updated_at = ?
+               WHERE id = ? AND status = 'PENDING_REVIEW'""",
+            (review_status, _now(), extraction_id),
+        )
+        if cursor.rowcount != 1:
+            raise ValueError("Extraction is not pending review")
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
 
 
 def save_confidence_results(

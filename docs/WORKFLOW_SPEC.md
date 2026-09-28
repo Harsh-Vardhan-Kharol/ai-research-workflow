@@ -75,8 +75,17 @@ extraction group (so a partial group failure doesn't leave orphaned rows).
 
 ### 9. Review (conditional)
 Any extraction with `review_required = true` appears on the Review page.
-Reviewer actions (Accept/Edit/Reject) write a `review_records` row and
-update the extraction's `status`.
+Only an extraction in `PENDING_REVIEW` may be reviewed. ACCEPT writes an
+`ACCEPTED` review record and changes item status to `ACCEPTED`; EDIT writes an
+`EDITED` record with a validated `reviewed_value` and changes item status to
+`EDITED`; REJECT writes a `REJECTED` record and changes item status to
+`REJECTED`. Every record preserves `original_value`, optional
+`reviewed_value`, optional comment, and `reviewed_at`. The extraction's
+`field_value`, proposed provenance, matched evidence, and confidence remain
+unchanged. The reviewed value is explicit in the record and does not inherit
+the original confidence/evidence claim. The paper remains `READY`; reviewing
+one item does not change paper status or imply that other pending items have
+been reviewed. A final decision cannot be resubmitted through the API.
 
 ### 10. Analytics / comparison
 Computed live from `extractions` at request time (no cache table). See
@@ -122,3 +131,7 @@ review suggested but does not block acceptance.
 - 2026-09-28: Phase 6 computes and persists deterministic confidence per item,
   routes weak/unavailable/failed evidence independently of score, and advances
   successful scoring from `SCORING_CONFIDENCE` to `READY`.
+- 2026-09-28: Phase 7 implements the item-level review actions as specified;
+  review status is terminal per item while paper-level `READY` remains
+  independent. The original AI value and confidence/evidence provenance are
+  retained.

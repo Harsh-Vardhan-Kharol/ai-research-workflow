@@ -56,6 +56,13 @@
 - Paper content is always treated as untrusted input, never as system
   instructions (see `SECURITY.md`).
 
+## Phase implementation notes
+
+- 2026-09-28: Phase 7 implements requirement P0.9's conditional
+  Accept/Edit/Reject backend workflow. Review preserves the original AI
+  extraction and provenance and records the human decision separately; the
+  review dashboard remains a later UI task.
+
 ## Explicit non-goals (do not build, even if "easy")
 
 Autonomous agent frameworks, multi-agent orchestration, GraphRAG, vector DB,

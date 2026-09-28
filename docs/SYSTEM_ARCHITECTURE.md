@@ -77,6 +77,13 @@ evidence and advances successful papers to `READY`. Review-required claims
 remain `PENDING_REVIEW` without blocking paper readiness. The proposal and
 matched passage remain separate fields.
 
+Phase 7 handles review through `POST /api/v1/extractions/{id}/review` and the
+repository's atomic SQLite transaction. Only `PENDING_REVIEW` items can be
+reviewed. The API persists ACCEPTED/EDITED/REJECTED records and item statuses;
+the original `field_value`, evidence, and confidence stay unchanged. An EDIT
+value is available from the review record and does not inherit the AI claim's
+evidence or confidence. Review does not change paper-level `READY` status.
+
 ## Data flow contract
 
 Nothing downstream of "Schema Validator" ever sees raw, unvalidated AI output.
@@ -103,3 +110,5 @@ be silently reordered.
 - 2026-09-28: Phase 6 adds deterministic weighted scoring, stored signal
   breakdown and review reasons, separate evidence-driven routing, and the
   `SCORING_CONFIDENCE -> READY` transition. No additional model call is used.
+- 2026-09-28: Phase 7 adds one atomic backend decision per pending extraction;
+  no dashboard or paper-level status transition is part of this phase.

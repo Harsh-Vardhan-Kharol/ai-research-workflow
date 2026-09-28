@@ -58,6 +58,11 @@ independent of score level; see `CONFIDENCE_SYSTEM.md` for reasons and meaning.
 
 ### GET /extractions/{extraction_id}
 Single extraction item, full detail including confidence and routing output.
+After review, `field_value` remains the original AI value and `review` contains
+the review record (`original_value`, `reviewed_value`, `review_status`,
+`review_comment`, `reviewed_at`). An EDIT response has item status `EDITED`;
+its `review.reviewed_value` is the human-reviewed value. Review does not change
+the original evidence or confidence fields.
 
 ### GET /extractions/{extraction_id}/evidence
 Evidence record for that extraction, including both proposed and matched
@@ -71,9 +76,21 @@ dedicated endpoint. Missing/unavailable/weak/failed evidence can set
 ### POST /extractions/{extraction_id}/review
 Body: `{ "action": "ACCEPT"|"EDIT"|"REJECT", "reviewed_value": str|null,
 "comment": str|null }`. `reviewed_value` required only for `EDIT`.
-Writes a `review_records` row and updates the extraction's status.
-- 200 -> updated extraction
-- 400 -> `EDIT` without `reviewed_value`
+Requires item status `PENDING_REVIEW`. ACCEPT stores `review_status=ACCEPTED`
+and changes item status to `ACCEPTED`; EDIT stores the validated human value
+and changes item status to `EDITED`; REJECT stores `review_status=REJECTED`
+and changes item status to `REJECTED`. All actions retain the AI value as
+`field_value` and as `review_records.original_value`. Comments are optional,
+trimmed, and limited to 2,000 characters. Edited values must be non-empty
+strings, are trimmed, and are limited to 12,000 characters. This follows the
+AI claim schema's string value type without claiming that the original
+evidence or confidence validates an edited value. The write is atomic.
+- 200 -> updated extraction including its review record
+- 400 -> `EDIT` without `reviewed_value` or value supplied for another action
+- 404 -> extraction not found
+- 409 -> item is not `PENDING_REVIEW` (including duplicate submissions)
+- 422 -> malformed action/payload, invalid value type, or size constraint
+- 500 -> database write failure; no partial review update is committed
 
 ## Analytics (computed live, no cache)
 
@@ -103,6 +120,9 @@ value(s) and confidence.
 - 2026-09-28: Phase 6 extends extraction responses with persisted confidence
   signals and review routing. `POST /process` now reaches `READY` after
   successful scoring; review-required items remain pending at item level.
+- 2026-09-28: Phase 7 implements the documented extraction review endpoint.
+  Review responses expose an optional review record while retaining
+  `field_value` as the original AI value; paper status remains unchanged.
 
 ## Idempotency & retries
 

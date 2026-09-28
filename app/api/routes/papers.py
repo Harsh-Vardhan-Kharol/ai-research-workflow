@@ -13,6 +13,7 @@ from app.api.errors import ApiError
 from app.core.config import get_settings
 from app.database.connection import connect_database
 from app.database.repository import (
+    apply_extraction_review,
     create_paper,
     get_extraction_with_evidence,
     find_paper_by_hash,
@@ -31,6 +32,8 @@ from app.schemas.papers import (
     PaperProcessResponse,
     PaperStatusResponse,
     PaperUploadResponse,
+    ReviewRequest,
+    ReviewRecordResponse,
 )
 from app.services.paper_processing import process_paper_text
 from app.services.pdf_processor import UploadRejected, stage_pdf_upload
@@ -42,6 +45,60 @@ evidence_router = APIRouter(prefix="/api/v1", tags=["evidence"])
 
 def _upload_directory(database_path: Path) -> Path:
     return database_path.parent / "uploads"
+
+
+def _review_response(row: sqlite3.Row) -> ReviewRecordResponse | None:
+    if row["review_id"] is None:
+        return None
+    return ReviewRecordResponse(
+        original_value=row["original_value"],
+        reviewed_value=row["reviewed_value"],
+        review_status=row["review_status"],
+        review_comment=row["review_comment"],
+        reviewed_at=row["reviewed_at"],
+    )
+
+
+def _extraction_response(row: sqlite3.Row) -> ExtractionItemResponse:
+    evidence = None
+    if row["match_status"] is not None:
+        evidence = EvidenceSummary(
+            proposed_source_text=row["proposed_source_text"],
+            proposed_page=row["proposed_page"],
+            proposed_section=row["proposed_section"],
+            page_number=row["page_number"],
+            section_name=row["section_name"],
+            matched_source_text=row["verified_source_text"],
+            evidence_score=row["evidence_score"],
+            page_corrected=bool(row["page_corrected"]),
+            match_status=row["match_status"],
+            failure_code=row["failure_code"],
+        )
+    return ExtractionItemResponse(
+        id=row["id"],
+        group_name=row["group_name"],
+        field_name=row["field_name"],
+        item_index=row["item_index"],
+        field_value=row["field_value"],
+        proposed_source_text=row["proposed_source_text"],
+        proposed_page=row["proposed_page"],
+        proposed_section=row["proposed_section"],
+        confidence_score=row["confidence_score"],
+        confidence_level=row["confidence_level"],
+        confidence_signals=(
+            json.loads(row["confidence_signals"])
+            if row["confidence_signals"] is not None else None
+        ),
+        review_required=bool(row["review_required"]),
+        review_reasons=(
+            json.loads(row["review_reasons"])
+            if row["review_reasons"] is not None else None
+        ),
+        status=row["status"],
+        section_detected=bool(row["section_detected"]),
+        evidence=evidence,
+        review=_review_response(row),
+    )
 
 
 @router.post("/upload", status_code=201, response_model=PaperUploadResponse)
@@ -259,36 +316,8 @@ def get_paper_extractions(paper_id: int) -> PaperExtractionsResponse:
         extractions = []
         for row in get_extractions_for_paper(connection, paper_id):
             joined = get_extraction_with_evidence(connection, row["id"])
-            evidence = None
-            if joined is not None and joined["match_status"] is not None:
-                evidence = EvidenceSummary(
-                    proposed_source_text=joined["proposed_source_text"],
-                    proposed_page=joined["proposed_page"],
-                    proposed_section=joined["proposed_section"],
-                    page_number=joined["page_number"],
-                    section_name=joined["section_name"],
-                    matched_source_text=joined["verified_source_text"],
-                    evidence_score=joined["evidence_score"],
-                    page_corrected=bool(joined["page_corrected"]),
-                    match_status=joined["match_status"],
-                    failure_code=joined["failure_code"],
-                )
-            extractions.append(
-                {
-                    **dict(row),
-                    "confidence_signals": (
-                        json.loads(row["confidence_signals"])
-                        if row["confidence_signals"] is not None else None
-                    ),
-                    "review_reasons": (
-                        json.loads(row["review_reasons"])
-                        if row["review_reasons"] is not None else None
-                    ),
-                    "review_required": bool(row["review_required"]),
-                    "section_detected": bool(row["section_detected"]),
-                    "evidence": evidence,
-                }
-            )
+            if joined is not None:
+                extractions.append(_extraction_response(joined))
         return PaperExtractionsResponse(paper_id=paper_id, extractions=extractions)
     finally:
         connection.close()
@@ -304,44 +333,81 @@ def get_extraction(extraction_id: int) -> ExtractionItemResponse:
         row = get_extraction_with_evidence(connection, extraction_id)
         if row is None:
             raise ApiError(404, "EXTRACTION_NOT_FOUND", "Extraction not found.")
-        evidence = None
-        if row["match_status"] is not None:
-            evidence = EvidenceSummary(
-                proposed_source_text=row["proposed_source_text"],
-                proposed_page=row["proposed_page"],
-                proposed_section=row["proposed_section"],
-                page_number=row["page_number"],
-                section_name=row["section_name"],
-                matched_source_text=row["verified_source_text"],
-                evidence_score=row["evidence_score"],
-                page_corrected=bool(row["page_corrected"]),
-                match_status=row["match_status"],
-                failure_code=row["failure_code"],
-            )
-        return ExtractionItemResponse(
-            id=row["id"],
-            group_name=row["group_name"],
-            field_name=row["field_name"],
-            item_index=row["item_index"],
-            field_value=row["field_value"],
-            proposed_source_text=row["proposed_source_text"],
-            proposed_page=row["proposed_page"],
-            proposed_section=row["proposed_section"],
-            confidence_score=row["confidence_score"],
-            confidence_level=row["confidence_level"],
-            confidence_signals=(
-                json.loads(row["confidence_signals"])
-                if row["confidence_signals"] is not None else None
-            ),
-            review_required=bool(row["review_required"]),
-            review_reasons=(
-                json.loads(row["review_reasons"])
-                if row["review_reasons"] is not None else None
-            ),
-            status=row["status"],
-            section_detected=bool(row["section_detected"]),
-            evidence=evidence,
+        return _extraction_response(row)
+    finally:
+        connection.close()
+
+
+@evidence_router.post(
+    "/extractions/{extraction_id}/review",
+    response_model=ExtractionItemResponse,
+)
+def review_extraction(
+    extraction_id: int, payload: ReviewRequest
+) -> ExtractionItemResponse:
+    """Record a final review action and retain the AI-generated value."""
+    if payload.action == "EDIT" and payload.reviewed_value is None:
+        logger.warning(
+            "REVIEW_VALIDATION_FAILED",
+            extra={"extraction_id": extraction_id, "reason": "value_required"},
         )
+        raise ApiError(
+            400, "REVIEW_VALUE_REQUIRED", "EDIT requires reviewed_value."
+        )
+    if payload.action != "EDIT" and payload.reviewed_value is not None:
+        logger.warning(
+            "REVIEW_VALIDATION_FAILED",
+            extra={"extraction_id": extraction_id, "reason": "unexpected_value"},
+        )
+        raise ApiError(
+            400,
+            "UNEXPECTED_REVIEW_VALUE",
+            "reviewed_value is only allowed for EDIT.",
+        )
+    connection = connect_database()
+    try:
+        apply_extraction_review(
+            connection,
+            extraction_id,
+            payload.action,
+            payload.reviewed_value,
+            payload.comment,
+        )
+        row = get_extraction_with_evidence(connection, extraction_id)
+        if row is None:
+            raise ApiError(404, "EXTRACTION_NOT_FOUND", "Extraction not found.")
+        logger.info(
+            "EXTRACTION_REVIEWED",
+            extra={"extraction_id": extraction_id, "action": payload.action},
+        )
+        return _extraction_response(row)
+    except LookupError as exc:
+        logger.info(
+            "EXTRACTION_REVIEW_NOT_FOUND",
+            extra={"extraction_id": extraction_id},
+        )
+        raise ApiError(404, "EXTRACTION_NOT_FOUND", "Extraction not found.") from exc
+    except ValueError as exc:
+        row = get_extraction_with_evidence(connection, extraction_id)
+        current_status = row["status"] if row is not None else None
+        logger.warning(
+            "EXTRACTION_REVIEW_CONFLICT",
+            extra={"extraction_id": extraction_id, "current_status": current_status},
+        )
+        raise ApiError(
+            409,
+            "REVIEW_CONFLICT",
+            "This extraction is not pending review.",
+            current_status=current_status,
+        ) from exc
+    except sqlite3.Error as exc:
+        logger.exception(
+            "EXTRACTION_REVIEW_DATABASE_FAILED",
+            extra={"extraction_id": extraction_id},
+        )
+        raise ApiError(
+            500, "DATABASE_ERROR", "A database error occurred while saving review."
+        ) from exc
     finally:
         connection.close()
 

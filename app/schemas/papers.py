@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class PaperUploadResponse(BaseModel):
@@ -66,6 +66,41 @@ class ExtractionItemResponse(BaseModel):
     status: str
     section_detected: bool
     evidence: EvidenceSummary | None
+    review: "ReviewRecordResponse | None" = None
+
+
+class ReviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    action: Literal["ACCEPT", "EDIT", "REJECT"]
+    reviewed_value: str | None = Field(default=None, max_length=12000)
+    comment: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("reviewed_value")
+    @classmethod
+    def normalize_reviewed_value(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("reviewed_value must not be empty")
+        return cleaned
+
+    @field_validator("comment")
+    @classmethod
+    def normalize_comment(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class ReviewRecordResponse(BaseModel):
+    original_value: str
+    reviewed_value: str | None
+    review_status: Literal["ACCEPTED", "EDITED", "REJECTED"]
+    review_comment: str | None
+    reviewed_at: str
 
 
 class PaperExtractionsResponse(BaseModel):

@@ -42,8 +42,12 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def handle_request_validation(
-        _: Request, error: RequestValidationError
+        request: Request, error: RequestValidationError
     ) -> JSONResponse:
+        if request.url.path.endswith("/review"):
+            logger.warning(
+                "REVIEW_VALIDATION_FAILED", extra={"path": request.url.path}
+            )
         return JSONResponse(
             status_code=422,
             content={
@@ -55,7 +59,9 @@ def register_error_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(Exception)
-    async def handle_unexpected_error(request: Request, error: Exception) -> JSONResponse:
+    async def handle_unexpected_error(
+        request: Request, error: Exception
+    ) -> JSONResponse:
         logger.error(
             "UNHANDLED_API_ERROR",
             exc_info=(type(error), error, error.__traceback__),

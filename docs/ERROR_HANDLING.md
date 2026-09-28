@@ -33,6 +33,10 @@
 | Database errors | Exception on write | Roll back the transaction for that group only; do not corrupt already-committed groups | "A database error occurred while saving results." | `PROCESSING_FAILED` (ERROR) |
 | Duplicate paper (same hash) | Hash check on upload | 409, do not re-process | "This file has already been uploaded (paper #{id})." | `UPLOAD_REJECTED` (INFO) |
 | Partial extraction/mapping | Some groups fail while other groups or items persist | Score available extraction items; preserve the partial failure reason and reach `READY` if confidence persistence succeeds | Dashboard shows which fields are missing/failed | `PAPER_PROCESSED` (INFO, with `partial=true` if applicable) |
+| Missing extraction for review | Review endpoint lookup finds no item | Return 404 `EXTRACTION_NOT_FOUND`; write nothing | "Extraction not found." | `EXTRACTION_REVIEW_NOT_FOUND` (not logged with document content) |
+| Invalid review payload/value | Request schema rejects unknown action/fields, wrong value type, empty EDIT value, or size limit | Return 422 for malformed data; return 400 when EDIT lacks a value or another action supplies one | Safe validation message | `REVIEW_VALIDATION_FAILED` (not logged with submitted content) |
+| Review already completed or not pending | Item status is not `PENDING_REVIEW` | Return 409 `REVIEW_CONFLICT`; create no additional record | "This extraction is not pending review." | `EXTRACTION_REVIEW_CONFLICT` |
+| Review database failure | Atomic review insert/update fails | Roll back both review row and item status; return 500 | "A database error occurred while saving review." | `EXTRACTION_REVIEW_DATABASE_FAILED` (ERROR) |
 
 ## Retry policy (summary)
 
