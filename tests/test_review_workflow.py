@@ -160,6 +160,38 @@ def test_invalid_review_payloads_and_values_are_rejected(
         ).status_code == 404
 
 
+def test_paper_list_and_detail_api_reads(tmp_path, monkeypatch) -> None:
+    database_path = tmp_path / "paper-views.db"
+    _configure_database(monkeypatch, database_path)
+    extraction_id = _pending_extraction(database_path)
+    connection = connect_database(database_path)
+    try:
+        paper_id = connection.execute(
+            "SELECT paper_id FROM extractions WHERE id = ?", (extraction_id,)
+        ).fetchone()[0]
+        connection.execute(
+            "UPDATE papers SET title = ?, abstract = ?, authors = ?, publication_year = ? WHERE id = ?",
+            ("Example study", "Abstract text", "A. Author", 2024, paper_id),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    with TestClient(main_module.app) as client:
+        listed = client.get("/api/v1/papers")
+        assert listed.status_code == 200
+        assert listed.json()["papers"][0]["id"] == paper_id
+        assert listed.json()["papers"][0]["file_name"] == "review.pdf"
+        assert listed.json()["papers"][0]["pending_review_count"] == 1
+
+        detail = client.get(f"/api/v1/papers/{paper_id}")
+        assert detail.status_code == 200
+        assert detail.json()["title"] == "Example study"
+        assert detail.json()["authors"] == "A. Author"
+        assert detail.json()["extraction_counts_by_confidence"] == {"LOW": 1}
+        assert client.get("/api/v1/papers/99999").status_code == 404
+
+
 @pytest.mark.parametrize("status", ["ACCEPTED", "EDITED", "REJECTED", "EXTRACTED"])
 def test_non_pending_and_duplicate_reviews_conflict(
     tmp_path, monkeypatch, status

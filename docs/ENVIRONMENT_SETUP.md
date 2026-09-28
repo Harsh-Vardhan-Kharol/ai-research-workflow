@@ -15,6 +15,7 @@
 | `MAX_EXTRACTION_CHARS` | no | `12000` | Chunking cap per extraction call |
 | `MIN_EVIDENCE_THRESHOLD` | no | `0.35` | Below this, evidence_score contributes 0 to confidence |
 | `LOG_LEVEL` | no | `INFO` | `DEBUG` for full-content logging (see `SECURITY.md` caveat) |
+| `RESEARCHFLOW_API_URL` | no | `http://localhost:8000` | FastAPI base URL used by Streamlit |
 
 `.env.example` should list all of the above with placeholder/default values;
 `.env` itself must be in `.gitignore`. No vendor, model, endpoint, or key is
@@ -29,6 +30,10 @@ cp .env.example .env   # then fill in AI_API_KEY
 uvicorn app.main:app --reload --port 8000
 streamlit run frontend/app.py
 ```
+
+Run the two server commands in separate terminals. Set
+`RESEARCHFLOW_API_URL` in the frontend terminal to point it at another API
+address, for example `RESEARCHFLOW_API_URL=http://127.0.0.1:8000`.
 
 ## Deployment
 

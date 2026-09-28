@@ -22,6 +22,29 @@ class PaperStatusResponse(BaseModel):
     failure_reason: str | None
 
 
+class PaperListItemResponse(BaseModel):
+    id: int
+    title: str | None
+    file_name: str
+    status: str
+    created_at: str
+    updated_at: str
+    pending_review_count: int
+
+
+class PaperListResponse(BaseModel):
+    papers: list[PaperListItemResponse]
+
+
+class PaperDetailResponse(PaperListItemResponse):
+    abstract: str | None
+    authors: str | None
+    publication_year: int | None
+    source: str | None
+    failure_reason: str | None
+    extraction_counts_by_confidence: dict[str, int]
+
+
 class ExtractionGroupResponse(BaseModel):
     group_name: str
     status: Literal["SUCCEEDED", "FAILED"]

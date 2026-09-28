@@ -6,3 +6,5 @@ python-multipart==0.0.32
 uvicorn==0.29.0
 pytest==8.2.2
 rapidfuzz==3.14.6
+requests==2.34.2
+streamlit==1.44.1

@@ -1,5 +1,10 @@
 # Testing Strategy
 
+Phase 8 tests the frontend HTTP client's successful response parsing, safe
+error conversion and review request payload, plus edit validation and
+extraction grouping helpers. API integration tests cover paper-list/detail
+reads and 404 behavior. Streamlit browser rendering is not asserted.
+
 ## Unit tests (`tests/unit/`)
 
 | Subsystem | Cases | Acceptance criteria |

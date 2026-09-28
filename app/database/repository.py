@@ -189,6 +189,32 @@ def get_paper(connection: sqlite3.Connection, paper_id: int) -> sqlite3.Row | No
     ).fetchone()
 
 
+def list_papers(connection: sqlite3.Connection) -> list[sqlite3.Row]:
+    """List paper records newest first for the API-backed paper browser."""
+    return list(
+        connection.execute(
+            """SELECT p.*, (
+                   SELECT COUNT(*) FROM extractions e
+                   WHERE e.paper_id = p.id AND e.status = 'PENDING_REVIEW'
+               ) AS pending_review_count
+               FROM papers p ORDER BY p.created_at DESC, p.id DESC"""
+        ).fetchall()
+    )
+
+
+def get_paper_extraction_counts(
+    connection: sqlite3.Connection, paper_id: int
+) -> dict[str, int]:
+    """Count extraction items by confidence level for one paper."""
+    rows = connection.execute(
+        """SELECT COALESCE(confidence_level, 'UNSCORED') AS confidence_level,
+                  COUNT(*) AS item_count
+           FROM extractions WHERE paper_id = ? GROUP BY confidence_level""",
+        (paper_id,),
+    ).fetchall()
+    return {row["confidence_level"]: row["item_count"] for row in rows}
+
+
 def set_paper_status(
     connection: sqlite3.Connection,
     paper_id: int,

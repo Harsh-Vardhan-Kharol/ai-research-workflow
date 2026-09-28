@@ -23,6 +23,11 @@
 
 ## Processing model (corrected — no queue infrastructure)
 
+The Streamlit client runs separately and uses HTTP only. Its base URL is
+configured with `RESEARCHFLOW_API_URL` (default `http://localhost:8000`). It
+does not import backend repositories/models or open SQLite. Start it with
+`streamlit run frontend/app.py` after starting FastAPI.
+
 Paper processing runs as a single FastAPI `BackgroundTasks` job triggered by
 `POST /api/v1/papers/{id}/process`. The paper's `status` column is the source
 of truth for progress; the frontend polls `GET /api/v1/papers/{id}/status`.

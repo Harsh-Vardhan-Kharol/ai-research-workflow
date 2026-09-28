@@ -13,10 +13,12 @@ Multipart file upload (PDF only).
 - 409 -> duplicate file_hash, includes `existing_paper_id`
 
 ### GET /papers
-List papers (id, title, status, created_at). Supports `?status=` filter.
+Returns `{ "papers": [...] }` with id, title, file_name, status, created_at,
+updated_at, and `pending_review_count`. Papers are ordered newest first.
 
 ### GET /papers/{paper_id}
-Full paper record including counts of extractions by confidence level.
+Full paper record including metadata, failure reason, pending review count, and
+counts of extractions by confidence level (`UNSCORED` when absent).
 - 404 if not found.
 
 ### DELETE /papers/{paper_id}
@@ -123,6 +125,9 @@ value(s) and confidence.
 - 2026-09-28: Phase 7 implements the documented extraction review endpoint.
   Review responses expose an optional review record while retaining
   `field_value` as the original AI value; paper status remains unchanged.
+- 2026-09-28: Phase 8 implements the documented paper list and detail reads
+  used by Streamlit. The list includes pending-review counts; detail includes
+  extraction counts grouped by confidence level.
 
 ## Idempotency & retries
 

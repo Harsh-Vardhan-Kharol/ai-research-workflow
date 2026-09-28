@@ -62,6 +62,9 @@
   Accept/Edit/Reject backend workflow. Review preserves the original AI
   extraction and provenance and records the human decision separately; the
   review dashboard remains a later UI task.
+- 2026-09-28: Phase 8 provides the Streamlit paper inspection and review
+  interface over FastAPI. It does not access the database directly or alter
+  workflow state rules.
 
 ## Explicit non-goals (do not build, even if "easy")
 

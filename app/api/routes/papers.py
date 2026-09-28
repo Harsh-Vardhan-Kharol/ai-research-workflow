@@ -19,7 +19,9 @@ from app.database.repository import (
     find_paper_by_hash,
     get_extractions_for_paper,
     get_extraction_groups,
+    get_paper_extraction_counts,
     get_paper,
+    list_papers,
     initialize_schema,
     set_paper_status,
 )
@@ -34,6 +36,9 @@ from app.schemas.papers import (
     PaperUploadResponse,
     ReviewRequest,
     ReviewRecordResponse,
+    PaperListResponse,
+    PaperListItemResponse,
+    PaperDetailResponse,
 )
 from app.services.paper_processing import process_paper_text
 from app.services.pdf_processor import UploadRejected, stage_pdf_upload
@@ -41,6 +46,39 @@ from app.services.pdf_processor import UploadRejected, stage_pdf_upload
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/papers", tags=["papers"])
 evidence_router = APIRouter(prefix="/api/v1", tags=["evidence"])
+
+
+@router.get("", response_model=PaperListResponse)
+def get_papers() -> PaperListResponse:
+    """List uploaded papers and their pending-review counts."""
+    connection = connect_database()
+    try:
+        return PaperListResponse(
+            papers=[PaperListItemResponse(**dict(row)) for row in list_papers(connection)]
+        )
+    finally:
+        connection.close()
+
+
+@router.get("/{paper_id}", response_model=PaperDetailResponse)
+def get_paper_detail(paper_id: int) -> PaperDetailResponse:
+    """Return one paper record with extraction confidence counts."""
+    connection = connect_database()
+    try:
+        paper = get_paper(connection, paper_id)
+        if paper is None:
+            raise ApiError(404, "PAPER_NOT_FOUND", "Paper not found.")
+        body = dict(paper)
+        body["pending_review_count"] = sum(
+            1 for row in get_extractions_for_paper(connection, paper_id)
+            if row["status"] == "PENDING_REVIEW"
+        )
+        body["extraction_counts_by_confidence"] = get_paper_extraction_counts(
+            connection, paper_id
+        )
+        return PaperDetailResponse(**body)
+    finally:
+        connection.close()
 
 
 def _upload_directory(database_path: Path) -> Path:
