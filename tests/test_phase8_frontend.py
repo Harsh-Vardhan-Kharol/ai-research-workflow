@@ -8,6 +8,7 @@ import pytest
 from frontend.api_client import ApiClientError, ResearchFlowApi
 from frontend.components.extraction_card import group_extractions
 from frontend.components.review_controls import validate_comment, validate_edit
+from frontend.components.comparison_view import frequency_rows, pairwise_rows
 
 
 class FakeResponse:
@@ -88,3 +89,40 @@ def test_extractions_are_grouped_by_backend_group_name():
     assert group_extractions(items) == {
         "metadata": [items[0], items[2]], "results": [items[1]]
     }
+
+
+def test_comparison_client_posts_ids_and_validates_response():
+    body = {
+        "selected_papers": [], "dimensions": [], "pairwise_differences": [],
+        "missing_information": [], "patterns": [],
+    }
+    session = FakeSession(FakeResponse(body=body))
+    api = ResearchFlowApi("http://api.local", session=session)
+    assert api.compare_papers([3, 7]) == body
+    method, url, kwargs = session.calls[0]
+    assert method == "POST"
+    assert url == "http://api.local/api/v1/analytics/compare"
+    assert kwargs["json"] == {"paper_ids": [3, 7]}
+
+    malformed = FakeSession(FakeResponse(body={"dimensions": []}))
+    with pytest.raises(ApiClientError, match="malformed data"):
+        ResearchFlowApi(session=malformed).compare_papers([3, 7])
+
+
+def test_comparison_view_helpers_keep_paper_traceability():
+    dimension = {"frequencies": [{
+        "normalized_value": "random forest", "original_values": ["Random Forest"],
+        "paper_ids": [1, 2], "count": 2, "sources": [{"extraction_id": 14}],
+    }]}
+    papers = {1: {"title": "Paper A"}, 2: {"file_name": "b.pdf"}}
+    rows = frequency_rows(dimension, papers)
+    assert rows[0]["Papers"] == "Paper A, b.pdf"
+    assert rows[0]["Paper IDs"] == [1, 2]
+    assert rows[0]["Source records"] == [{"extraction_id": 14}]
+    comparison = {"pairwise_differences": [{
+        "first_paper_id": 1, "second_paper_id": 2,
+        "dimensions": [{"dimension": "datasets", "first_reported": True,
+                        "second_reported": True, "first_only": ["x"],
+                        "second_only": ["y"], "shared_values": []}],
+    }]}
+    assert pairwise_rows(comparison, papers)[0]["Paper A"] == "x"

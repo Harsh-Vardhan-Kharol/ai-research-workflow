@@ -89,6 +89,24 @@ the original `field_value`, evidence, and confidence stay unchanged. An EDIT
 value is available from the review record and does not inherit the AI claim's
 evidence or confidence. Review does not change paper-level `READY` status.
 
+Phase 9 adds `POST /api/v1/analytics/compare`. Its API route calls a
+comparison service, which uses the repository to fetch selected paper states
+and usable extraction rows in bounded queries. The service aggregates only
+persisted structured `field_value` records; it does not load page text or call
+an LLM. Each result retains paper IDs and extraction IDs, alongside
+confidence/review metadata. READY is the only eligible paper state. Rejected
+items are excluded; pending, accepted, and edited items remain visible with
+their status. For edited items the original value remains the comparison
+value, and the separate human-reviewed value is exposed without inheriting
+the original confidence/evidence. Streamlit consumes this API over HTTP.
+
+Comparison dimensions follow the current validated extraction schema:
+research problem/objective, methodology/models, datasets, experimental setup,
+evaluation metrics, and key results. Limitations are explicitly unavailable
+until the persisted extraction schema supports them. Normalization is limited
+to Unicode NFKC, casefolding, punctuation-to-space, and whitespace collapse;
+it does not infer semantic equivalence.
+
 ## Data flow contract
 
 Nothing downstream of "Schema Validator" ever sees raw, unvalidated AI output.
@@ -117,3 +135,6 @@ be silently reordered.
   `SCORING_CONFIDENCE -> READY` transition. No additional model call is used.
 - 2026-09-28: Phase 7 adds one atomic backend decision per pending extraction;
   no dashboard or paper-level status transition is part of this phase.
+- 2026-09-28: Phase 9 adds deterministic comparison and pattern detection over
+  validated extraction rows without adding a table or changing confidence,
+  evidence, or review workflow semantics.

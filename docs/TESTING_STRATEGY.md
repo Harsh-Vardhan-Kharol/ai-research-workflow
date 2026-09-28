@@ -2,8 +2,12 @@
 
 Phase 8 tests the frontend HTTP client's successful response parsing, safe
 error conversion and review request payload, plus edit validation and
-extraction grouping helpers. API integration tests cover paper-list/detail
-reads and 404 behavior. Streamlit browser rendering is not asserted.
+extraction grouping helpers. Phase 9 adds deterministic comparison tests for
+normalization, READY/selection validation, frequencies and source traceability,
+pairwise differences, missing fields, patterns, and unavailable limitations.
+API tests cover the comparison schema and error envelope; frontend tests cover
+request construction, response validation, and traceable render transformations.
+Streamlit browser rendering is not asserted.
 
 ## Unit tests (`tests/unit/`)
 
@@ -16,6 +20,7 @@ reads and 404 behavior. Streamlit browser rendering is not asserted.
 | Confidence calculation | all-strong/all-weak/mixed signals; boundary values immediately around 0.45 and 0.75; MATCHED/WEAK/UNAVAILABLE/FAILED/missing evidence; invalid values | Exact formula and level; zero/missing/weak/failed evidence routing independently requires review; no invalid value produces a score |
 | Database repository | insert/read/update/delete for every table, cascade delete | Cascades verified by asserting child rows are gone after parent delete |
 | Analytics | frequency counts against a fixture set of extractions | Counts match hand-computed expected values |
+| Phase 9 comparison | normalization, selection, frequencies, pairwise differences, missing fields, patterns, and traceability | Deterministic results retain original values, confidence/review metadata, and source paper/extraction IDs |
 
 ## Integration tests (`tests/integration/`)
 

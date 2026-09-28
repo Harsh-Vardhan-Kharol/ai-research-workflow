@@ -107,13 +107,47 @@ Frequency counts of `field_value` across `extractions` for the relevant
 
 ### GET /analytics/limitations (P1)
 
-## Comparison
+## Multi-paper comparison
 
-### POST /compare
-Body: `{ "paper_ids": [int, int, int] }` (2–3 ids).
-Returns a field-by-field table: for each shared `field_name`, each paper's
-value(s) and confidence.
-- 400 if fewer than 2 or more than 3 ids given.
+### POST /analytics/compare
+Body: `{ "paper_ids": [int, ...] }`; at least two unique IDs. The request
+accepts two or more papers. Every paper must exist and be `READY`; a missing
+paper returns 404 and any other paper state returns 409. Duplicate IDs or an
+invalid/minimum-size payload return 422 using the standard error envelope.
+
+The response contains `selected_papers`, `dimensions`,
+`pairwise_differences`, `missing_information`, and `patterns`. Dimensions
+include research problem/objective, methodology/models, datasets, experimental
+setup, evaluation metrics, and key results. `limitations` is present with
+`available: false` because it is not in the persisted extraction schema.
+Every per-paper value and frequency source contains the extraction ID,
+original `field_value`, confidence score/level, review-required flag, item
+status, review status, and separate `reviewed_value` when one exists.
+Frequency `count` counts distinct papers, while `sources` retains each
+contributing extraction record. Pairwise results report exact normalized
+shared/first-only/second-only values and whether each paper reported that
+dimension (`available` is false for unsupported dimensions). Missing
+information means “not extracted/reported in the
+structured record,” not proof that the paper omits the subject.
+
+Only `READY` papers qualify. Extraction items in `PENDING_REVIEW`, `ACCEPTED`,
+and `EDITED` are included with their confidence and review metadata;
+`REJECTED` and pre-scoring `EXTRACTED` rows are excluded. For edited items,
+the analytical value remains the immutable original `field_value`; the human
+`reviewed_value` is returned separately and does not inherit confidence or
+evidence. No raw PDF text or LLM is used.
+
+Normalization applies Unicode NFKC, casefolding, punctuation-to-space, and
+whitespace collapse. It does not use synonyms, stemming, abbreviations, or
+semantic equivalence. Original values remain in the response beside the
+normalized key.
+
+Pattern rules are deterministic: a value appearing in at least two papers
+creates a `repeated_value` pattern; a supported dimension reported by fewer
+than half of selected papers creates a `sparse_field` pattern; two or more
+papers with reported, distinct methodology/model values create
+`methodological_variation`. Limitations cannot generate patterns until the
+extraction schema supports them.
 
 ## Deviation Log
 
@@ -128,6 +162,9 @@ value(s) and confidence.
 - 2026-09-28: Phase 8 implements the documented paper list and detail reads
   used by Streamlit. The list includes pending-review counts; detail includes
   extraction counts grouped by confidence level.
+- 2026-09-28: Phase 9 adds `POST /analytics/compare`, live deterministic
+  aggregation over READY-paper extraction rows, explicit item review/confidence
+  metadata, source-paper traceability, and the Streamlit comparison page.
 
 ## Idempotency & retries
 

@@ -215,6 +215,31 @@ def get_paper_extraction_counts(
     return {row["confidence_level"]: row["item_count"] for row in rows}
 
 
+def get_comparison_records(
+    connection: sqlite3.Connection, paper_ids: list[int]
+) -> tuple[list[sqlite3.Row], list[sqlite3.Row]]:
+    """Fetch selected paper states and usable extraction records in two queries."""
+    placeholders = ",".join("?" for _ in paper_ids)
+    papers = list(connection.execute(
+        f"SELECT id, title, file_name, status FROM papers WHERE id IN ({placeholders})",
+        paper_ids,
+    ).fetchall())
+    extractions = list(connection.execute(
+        f"""SELECT x.id, x.paper_id, x.group_name, x.field_name, x.field_value,
+                   x.confidence_score, x.confidence_level, x.review_required,
+                   x.status, r.review_status, r.reviewed_value
+            FROM extractions x LEFT JOIN review_records r ON r.id = (
+                SELECT MAX(r2.id) FROM review_records r2
+                WHERE r2.extraction_id = x.id
+            )
+            WHERE x.paper_id IN ({placeholders})
+              AND x.status IN ('PENDING_REVIEW', 'ACCEPTED', 'EDITED')
+            ORDER BY x.paper_id, x.id""",
+        paper_ids,
+    ).fetchall())
+    return papers, extractions
+
+
 def set_paper_status(
     connection: sqlite3.Connection,
     paper_id: int,

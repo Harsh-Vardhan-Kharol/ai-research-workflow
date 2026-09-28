@@ -11,6 +11,7 @@ from frontend.components.confidence_display import render_confidence
 from frontend.components.evidence_display import render_evidence
 from frontend.components.extraction_card import group_extractions, render_extraction_identity
 from frontend.components.review_controls import render_review_controls
+from frontend.components.comparison_view import frequency_rows, pairwise_rows
 
 
 def api() -> ResearchFlowApi:
@@ -159,16 +160,107 @@ def review_page(client: ResearchFlowApi) -> None:
         _render_item(client, item, controls=True)
 
 
+def comparison_page(client: ResearchFlowApi) -> None:
+    st.header("Multi-paper comparison")
+    st.caption("Deterministic analysis of persisted structured extractions. Missing fields mean they were not extracted/reported in the structured record.")
+    try:
+        papers = [paper for paper in client.list_papers() if paper.get("status") == "READY"]
+    except ApiClientError as exc:
+        show_error(exc)
+        return
+    if not papers:
+        st.info("No READY papers are available for comparison.")
+        return
+    by_id = {int(paper["id"]): paper for paper in papers}
+    selected = st.multiselect(
+        "Select at least two READY papers",
+        list(by_id),
+        format_func=lambda paper_id: _paper_label(by_id[paper_id]),
+        key="comparison-paper-ids",
+    )
+    if st.button("Compare papers", type="primary", disabled=len(selected) < 2):
+        try:
+            st.session_state["comparison-result"] = client.compare_papers(selected)
+        except ApiClientError as exc:
+            show_error(exc)
+            return
+    comparison = st.session_state.get("comparison-result")
+    if not comparison:
+        return
+    selected_papers = comparison.get("selected_papers", [])
+    if [int(paper["id"]) for paper in selected_papers] != [int(pid) for pid in selected]:
+        st.info("Run the comparison for the current paper selection to refresh these results.")
+        return
+    paper_map = {int(paper["id"]): paper for paper in selected_papers}
+    st.subheader("Selected papers")
+    st.dataframe(
+        [{"Paper ID": p["id"], "Title": p.get("title") or p["file_name"], "Status": p["status"]}
+         for p in selected_papers], hide_index=True, use_container_width=True,
+    )
+    labels = {
+        "research_problem_objective": "Research problems and objectives",
+        "methodology_models": "Methods and models",
+        "datasets": "Datasets",
+        "experimental_setup": "Experimental setup",
+        "evaluation_metrics": "Evaluation metrics",
+        "key_results": "Key results",
+        "limitations": "Limitations",
+    }
+    st.subheader("Structured dimensions")
+    for dimension in comparison.get("dimensions", []):
+        label = labels.get(dimension["name"], dimension["name"].replace("_", " ").title())
+        with st.expander(label, expanded=dimension["name"] in {"methodology_models", "datasets", "evaluation_metrics"}):
+            if not dimension.get("available"):
+                st.info("Unavailable: limitations are not part of the persisted extraction schema.")
+                continue
+            rows = frequency_rows(dimension, paper_map)
+            if not rows:
+                st.caption("No values were extracted/reported in the selected structured records.")
+                continue
+            st.dataframe(
+                [{key: value for key, value in row.items() if key != "Source records"}
+                 for row in rows], hide_index=True, use_container_width=True,
+            )
+            for row in rows:
+                st.markdown(f"**Sources for {row['Value']}**")
+                st.json(row["Source records"])
+    st.subheader("Differences")
+    differences = pairwise_rows(comparison, paper_map)
+    if differences:
+        st.dataframe(differences, hide_index=True, use_container_width=True)
+    else:
+        st.caption("No paper-level values were available to compare.")
+    st.subheader("Missing information")
+    missing_rows = [
+        {"Dimension": labels.get(item["dimension"], item["dimension"].replace("_", " ").title()),
+         "Reported by": (f"{item['reported_by_count']}/{item['selected_paper_count']}"
+                         if item["available"] else "Unavailable"),
+         "Paper IDs not reported": item["paper_ids_not_reported"] if item["available"] else "Unavailable",
+         "Available": item["available"]}
+        for item in comparison.get("missing_information", [])
+    ]
+    st.dataframe(missing_rows, hide_index=True, use_container_width=True)
+    st.subheader("Research patterns")
+    patterns = comparison.get("patterns", [])
+    if patterns:
+        for pattern in patterns:
+            st.write(f"- {pattern['message']} · Paper IDs: {', '.join(map(str, pattern['paper_ids']))}")
+    else:
+        st.caption("No deterministic pattern rules matched this selection.")
+
+
 def main() -> None:
     st.set_page_config(page_title="ResearchFlow AI", page_icon="📄", layout="wide")
     st.title("ResearchFlow AI")
     st.caption("Inspect extracted claims, their evidence, and the system's review signals.")
     client = api()
-    page = st.sidebar.radio("Workspace", ["Papers", "Review queue", "Upload"])
+    page = st.sidebar.radio("Workspace", ["Papers", "Review queue", "Compare papers", "Upload"])
     if page == "Upload":
         upload_page(client)
     elif page == "Review queue":
         review_page(client)
+    elif page == "Compare papers":
+        comparison_page(client)
     else:
         papers_page(client)
 

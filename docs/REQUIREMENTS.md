@@ -65,6 +65,11 @@
 - 2026-09-28: Phase 8 provides the Streamlit paper inspection and review
   interface over FastAPI. It does not access the database directly or alter
   workflow state rules.
+- 2026-09-28: Phase 9 implements a deterministic multi-paper comparison over
+  persisted extraction rows. It preserves original values and extraction IDs,
+  exposes confidence/review state, requires READY papers, and does not call an
+  LLM. Limitations remain unavailable because that dimension is not yet
+  persisted by the extraction schema.
 
 ## Explicit non-goals (do not build, even if "easy")
 

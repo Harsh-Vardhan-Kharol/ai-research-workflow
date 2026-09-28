@@ -119,6 +119,17 @@ class ResearchFlowApi:
             raise ApiClientError("The backend returned malformed extraction data.")
         return items
 
+    def compare_papers(self, paper_ids: list[int]) -> dict[str, Any]:
+        data = self._request("POST", "/analytics/compare", json={"paper_ids": paper_ids})
+        required = (
+            "selected_papers", "dimensions", "pairwise_differences",
+            "missing_information", "patterns",
+        )
+        self._require_keys(data, *required)
+        if any(not isinstance(data[key], list) for key in required):
+            raise ApiClientError("The backend returned malformed comparison data.")
+        return data
+
     def get_extraction(self, extraction_id: int) -> dict[str, Any]:
         data = self._request("GET", f"/extractions/{extraction_id}")
         return self._require_keys(data, "id", "field_value", "status", "evidence")

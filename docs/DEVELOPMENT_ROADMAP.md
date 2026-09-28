@@ -47,6 +47,14 @@ working end-to-end.
 - Limitations/future-work extraction groups.
 - Reanalyze endpoint, review-history display.
 
+## Phase 9 implementation note
+
+The Phase 9 deterministic multi-paper comparison is implemented at
+`POST /api/v1/analytics/compare` with a Streamlit comparison view. It reads
+READY papers' persisted structured extraction items, retains paper and
+extraction traceability, and does not use an LLM or add a database table.
+Limitations remain unavailable until extraction persistence supports them.
+
 If time runs out before day 13, stop at the P0 checkpoint — that version is
 demo-safe on its own and must never be left broken in favor of partially
 built P1 features.
