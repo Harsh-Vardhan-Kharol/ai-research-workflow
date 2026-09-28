@@ -74,10 +74,20 @@ class ResultsExtraction(ExtractionPayload):
     key_results: list[Claim]
 
 
+class LimitationsExtraction(ExtractionPayload):
+    limitations: list[Claim]
+
+
+class FutureWorkExtraction(ExtractionPayload):
+    future_work: list[Claim]
+
+
 GROUP_MODELS: dict[str, type[ExtractionPayload]] = {
     "metadata": MetadataExtraction,
     "research_problem": ProblemExtraction,
     "methodology": MethodologyExtraction,
     "experiments": ExperimentsExtraction,
     "results": ResultsExtraction,
+    "limitations": LimitationsExtraction,
+    "future_work": FutureWorkExtraction,
 }

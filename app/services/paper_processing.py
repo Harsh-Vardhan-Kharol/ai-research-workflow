@@ -459,6 +459,9 @@ _EXPECTED_SECTIONS = {
     "experiments": {"experiments", "experimental setup", "datasets"},
     "results": {"results", "discussion"},
     "metadata": {"abstract"},
+    "limitations": {"limitations", "study limitations", "discussion", "conclusion",
+                    "conclusion and future work", "threats to validity"},
+    "future_work": {"future work", "conclusion and future work", "conclusion", "discussion"},
 }
 _PLACEHOLDERS = {
     "n/a", "na", "not applicable", "not reported", "not specified",

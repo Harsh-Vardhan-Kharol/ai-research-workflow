@@ -118,8 +118,12 @@ invalid/minimum-size payload return 422 using the standard error envelope.
 The response contains `selected_papers`, `dimensions`,
 `pairwise_differences`, `missing_information`, and `patterns`. Dimensions
 include research problem/objective, methodology/models, datasets, experimental
-setup, evaluation metrics, and key results. `limitations` is present with
-`available: false` because it is not in the persisted extraction schema.
+setup, evaluation metrics, key results, limitations, and future work. Top-level
+`limitations` and `future_work` summaries contain availability, frequencies,
+and repeated-value patterns. Their source objects also pair each extraction
+ID with its contributing paper ID. `gap_candidates` contains the candidate type,
+title, explanation, scope, basis, relevant values, supporting paper/extraction
+IDs, and source records with confidence/review metadata.
 Every per-paper value and frequency source contains the extraction ID,
 original `field_value`, confidence score/level, review-required flag, item
 status, review status, and separate `reviewed_value` when one exists.
@@ -146,8 +150,21 @@ Pattern rules are deterministic: a value appearing in at least two papers
 creates a `repeated_value` pattern; a supported dimension reported by fewer
 than half of selected papers creates a `sparse_field` pattern; two or more
 papers with reported, distinct methodology/model values create
-`methodological_variation`. Limitations cannot generate patterns until the
-extraction schema supports them.
+`methodological_variation`. Limitations and future work use the same
+normalization and repeated-value rule.
+
+Candidate types are `DATASET_CONCENTRATION`, `METHOD_CONCENTRATION`,
+`SPARSE_DIMENSION`, `RECURRING_LIMITATION`, `RECURRING_FUTURE_WORK`, and
+`METHOD_DATASET_ABSENCE`. Concentration defaults to at least 70% of selected
+papers and at least two distinct papers; configure it with
+`GAP_CONCENTRATION_THRESHOLD`. Sparse dimensions default to less than 50%
+coverage and require at least one supporting claim; configure with
+`GAP_SPARSE_THRESHOLD`. Recurrence requires two papers. Method/dataset absence
+means both values occur individually but never co-occur in a selected paper's
+structured records; it does not prove a field-wide or actual experimental
+pairing absence. Every result is a potential gap candidate scoped to the
+selected literature. Missing structured records do not prove that no research
+exists. The analytics is deterministic and uses no LLM.
 
 ## Deviation Log
 
@@ -165,6 +182,9 @@ extraction schema supports them.
 - 2026-09-28: Phase 9 adds `POST /analytics/compare`, live deterministic
   aggregation over READY-paper extraction rows, explicit item review/confidence
   metadata, source-paper traceability, and the Streamlit comparison page.
+- 2026-09-29: Phase 10 retains the compare endpoint, adds limitations and
+  future-work dimensions/summaries, and returns selected-literature-scoped,
+  traceable deterministic gap candidates without schema tables or LLM calls.
 
 ## Idempotency & retries
 

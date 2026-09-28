@@ -7,9 +7,10 @@ from itertools import combinations
 from typing import Any
 
 from app.database.repository import get_comparison_records
+from app.core.config import get_settings
 from app.services.normalization import normalize_comparison_value
 
-# Source fields are drawn only from Phase 4's validated extraction schema.
+# Source fields are drawn only from validated extraction groups.
 DIMENSIONS: dict[str, tuple[str, ...] | None] = {
     "research_problem_objective": ("research_problem", "research_objective"),
     "methodology_models": ("methodology", "models_algorithms"),
@@ -17,11 +18,12 @@ DIMENSIONS: dict[str, tuple[str, ...] | None] = {
     "experimental_setup": ("experimental_setup",),
     "evaluation_metrics": ("evaluation_metrics",),
     "key_results": ("key_results",),
-    "limitations": None,
+    "limitations": ("limitations",),
+    "future_work": ("future_work",),
 }
 REPEATABLE_DIMENSIONS = {
     "research_problem_objective", "methodology_models", "datasets",
-    "evaluation_metrics", "limitations",
+    "evaluation_metrics", "limitations", "future_work",
 }
 
 
@@ -187,10 +189,141 @@ def compare_papers(connection: Any, paper_ids: list[int]) -> dict[str, Any]:
             "message": "Methodology/model values vary across papers with reported methods.",
         })
 
+    gap_candidates = _gap_candidates(
+        paper_ids, values_by_dimension, dimension_results
+    )
+
     return {
         "selected_papers": selected,
         "dimensions": dimension_results,
         "pairwise_differences": differences,
         "missing_information": missing_information,
         "patterns": patterns,
+        "limitations": _dimension_summary(
+            "limitations", dimension_results, patterns, values_by_dimension
+        ),
+        "future_work": _dimension_summary(
+            "future_work", dimension_results, patterns, values_by_dimension
+        ),
+        "gap_candidates": gap_candidates,
     }
+
+
+def _dimension_summary(
+    name: str,
+    dimensions: list[dict[str, Any]],
+    patterns: list[dict[str, Any]],
+    values_by_dimension: dict[str, dict[int, dict[str, list[dict[str, Any]]]]],
+) -> dict[str, Any]:
+    dimension = next(item for item in dimensions if item["name"] == name)
+    frequencies = []
+    for frequency in dimension["frequencies"]:
+        sources = [
+            dict(source, paper_id=paper_id)
+            for paper_id in frequency["paper_ids"]
+            for source in values_by_dimension[name][paper_id].get(
+                frequency["normalized_value"], []
+            )
+        ]
+        frequencies.append({**frequency, "sources": sources})
+    return {
+        "available": dimension["available"],
+        "frequencies": frequencies,
+        "patterns": [p for p in patterns if p["dimension"] == name],
+    }
+
+
+def _gap_candidates(
+    paper_ids: list[int],
+    values_by_dimension: dict[str, dict[int, dict[str, list[dict[str, Any]]]]],
+    dimensions: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Generate scoped, source-traceable candidates from structured values only."""
+    settings = get_settings()
+    candidates: list[dict[str, Any]] = []
+    total = len(paper_ids)
+
+    def add(kind: str, title: str, basis: str, sources: list[dict[str, Any]], values: list[str]) -> None:
+        unique_sources = {source["extraction_id"]: source for source in sources}
+        ordered = list(unique_sources.values())
+        if not ordered:
+            return
+        ids = list(dict.fromkeys(source["paper_id"] for source in ordered))
+        candidates.append({
+            "type": kind,
+            "title": title,
+            "description": f"Potential gap candidate within the selected literature: {title.lower()}.",
+            "scope": f"Selected literature ({total} papers)",
+            "basis": basis,
+            "supporting_paper_ids": ids,
+            "supporting_extraction_ids": [source["extraction_id"] for source in ordered],
+            "relevant_values": values,
+            "sources": ordered,
+        })
+
+    for dimension, kind, label in (
+        ("datasets", "DATASET_CONCENTRATION", "dataset diversity"),
+        ("methodology_models", "METHOD_CONCENTRATION", "methodological diversity"),
+    ):
+        for frequency in next(d for d in dimensions if d["name"] == dimension)["frequencies"]:
+            if frequency["count"] >= 2 and frequency["count"] / total >= settings.gap_concentration_threshold:
+                sources = [dict(source, paper_id=pid)
+                           for pid in frequency["paper_ids"]
+                           for source in values_by_dimension[dimension][pid].get(
+                               frequency["normalized_value"], [])]
+                value = frequency["original_values"][0]
+                add(kind, f"Limited {label}",
+                    f"{value} appears in {frequency['count']}/{total} selected papers (threshold: {settings.gap_concentration_threshold:.0%}).",
+                    sources, [value])
+
+    for name, kind in (("limitations", "RECURRING_LIMITATION"), ("future_work", "RECURRING_FUTURE_WORK")):
+        for frequency in next(d for d in dimensions if d["name"] == name)["frequencies"]:
+            if frequency["count"] >= 2:
+                paper_for_extraction = _paper_for_sources(values_by_dimension[name], frequency["normalized_value"])
+                sources = [dict(source, paper_id=paper_id)
+                           for paper_id, source in paper_for_extraction]
+                value = frequency["original_values"][0]
+                add(kind, f"Recurring {name.replace('_', ' ')}: {value}",
+                    f"The same conservatively normalized value occurs in {frequency['count']} selected papers.",
+                    sources, frequency["original_values"])
+
+    for dimension in dimensions:
+        name = dimension["name"]
+        if not dimension["available"]:
+            continue
+        reported = [paper for paper in dimension["papers"] if paper["reported"]]
+        share = len(reported) / total
+        if reported and share < settings.gap_sparse_threshold:
+            sources = [dict(source, paper_id=paper["paper_id"])
+                       for paper in reported for source in paper["values"]]
+            add("SPARSE_DIMENSION",
+                f"Limited reporting of {name.replace('_', ' ')}",
+                f"Structured {name.replace('_', ' ')} values occur in {len(reported)}/{total} selected papers (below {settings.gap_sparse_threshold:.0%}).",
+                sources, [name])
+
+    method_map = values_by_dimension["methodology_models"]
+    dataset_map = values_by_dimension["datasets"]
+    method_keys = sorted(set().union(*(set(method_map[pid]) for pid in paper_ids)))
+    dataset_keys = sorted(set().union(*(set(dataset_map[pid]) for pid in paper_ids)))
+    for method in method_keys:
+        for dataset in dataset_keys:
+            co_reporters = [pid for pid in paper_ids if method in method_map[pid] and dataset in dataset_map[pid]]
+            if co_reporters:
+                continue
+            method_sources = [(pid, source) for pid in paper_ids for source in method_map[pid].get(method, [])]
+            dataset_sources = [(pid, source) for pid in paper_ids for source in dataset_map[pid].get(dataset, [])]
+            sources = [dict(source, paper_id=pid) for pid, source in [*method_sources, *dataset_sources]]
+            method_value = method_sources[0][1]["original_value"]
+            dataset_value = dataset_sources[0][1]["original_value"]
+            add("METHOD_DATASET_ABSENCE",
+                f"{method_value} × {dataset_value} coverage is not represented",
+                f"Both components are individually reported, but no selected paper's structured record contains both {method_value} and {dataset_value}.",
+                sources, [method_value, dataset_value])
+    return candidates
+
+
+def _paper_for_sources(
+    values: dict[int, dict[str, list[dict[str, Any]]]], normalized: str
+) -> list[tuple[int, dict[str, Any]]]:
+    return [(paper_id, source) for paper_id, groups in values.items()
+            for source in groups.get(normalized, [])]

@@ -95,3 +95,10 @@ extraction item has at most one evidence record, since list fields are
 already split one-row-per-item in `extractions`). If a future version
 needs multiple supporting passages per claim, that is a schema change to
 document, not to build speculatively now.
+
+Phase 10's `limitations` and `future_work` Claim items use this exact mapper.
+Their proposed passages remain proposals; the independently matched passage,
+page, section, score, and state come only from stored paper text. Missing
+proposed text remains `UNAVAILABLE` and routes through the existing confidence
+and review rules. Empty extraction lists produce no evidence rows because
+there is no claim to map.

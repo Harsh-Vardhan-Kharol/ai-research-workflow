@@ -102,10 +102,18 @@ the original confidence/evidence. Streamlit consumes this API over HTTP.
 
 Comparison dimensions follow the current validated extraction schema:
 research problem/objective, methodology/models, datasets, experimental setup,
-evaluation metrics, and key results. Limitations are explicitly unavailable
-until the persisted extraction schema supports them. Normalization is limited
-to Unicode NFKC, casefolding, punctuation-to-space, and whitespace collapse;
+evaluation metrics, key results, limitations, and future work. Normalization
+is limited to Unicode NFKC, casefolding, punctuation-to-space, and whitespace collapse;
 it does not infer semantic equivalence.
+
+Phase 10 extends the existing `Claim` schema and group registry with
+`limitations` and `future_work`, without adding tables. Claims flow through
+the same validated checkpoint, evidence, confidence, and review path. The
+comparison service exposes both dimensions and deterministic potential gap
+candidates with supporting extraction and paper IDs. Candidate rules use
+configured 70% concentration and less-than-50% sparse thresholds by default,
+two-paper recurrence, and structured co-occurrence coverage. Results are
+scoped to the selected literature and are not confirmed field-wide gaps.
 
 ## Data flow contract
 

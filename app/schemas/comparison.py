@@ -89,9 +89,38 @@ class ResearchPattern(BaseModel):
     message: str
 
 
+class GapCandidateSource(ComparisonSource):
+    paper_id: int
+
+
+class TraceableComparisonFrequency(ComparisonFrequency):
+    sources: list[GapCandidateSource]
+
+
+class GapCandidate(BaseModel):
+    type: str
+    title: str
+    description: str
+    scope: str
+    basis: str
+    supporting_paper_ids: list[int]
+    supporting_extraction_ids: list[int]
+    relevant_values: list[str]
+    sources: list[GapCandidateSource]
+
+
+class DimensionSummary(BaseModel):
+    available: bool
+    frequencies: list[TraceableComparisonFrequency]
+    patterns: list[ResearchPattern]
+
+
 class ComparisonResponse(BaseModel):
     selected_papers: list[SelectedPaper]
     dimensions: list[ComparisonDimension]
     pairwise_differences: list[PairwiseDifference]
     missing_information: list[MissingInformation]
     patterns: list[ResearchPattern]
+    limitations: DimensionSummary
+    future_work: DimensionSummary
+    gap_candidates: list[GapCandidate]

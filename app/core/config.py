@@ -24,6 +24,8 @@ class Settings:
     max_ai_retries: int
     max_extraction_chars: int
     min_evidence_threshold: float
+    gap_concentration_threshold: float
+    gap_sparse_threshold: float
     log_level: str
 
 
@@ -54,6 +56,15 @@ def get_settings() -> Settings:
     if not 0 <= threshold <= 1:
         raise ValueError("MIN_EVIDENCE_THRESHOLD must be between 0 and 1")
 
+    def proportion(name: str, default: str) -> float:
+        try:
+            value = float(os.getenv(name, default))
+        except ValueError as exc:
+            raise ValueError(f"{name} must be a number") from exc
+        if not 0 < value <= 1:
+            raise ValueError(f"{name} must be greater than 0 and at most 1")
+        return value
+
     log_level = os.getenv("LOG_LEVEL", "INFO").strip().upper()
     if log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
         raise ValueError("LOG_LEVEL must be a standard Python logging level")
@@ -70,5 +81,7 @@ def get_settings() -> Settings:
         max_ai_retries=_positive_int("MAX_AI_RETRIES", 2),
         max_extraction_chars=_positive_int("MAX_EXTRACTION_CHARS", 12000),
         min_evidence_threshold=threshold,
+        gap_concentration_threshold=proportion("GAP_CONCENTRATION_THRESHOLD", "0.70"),
+        gap_sparse_threshold=proportion("GAP_SPARSE_THRESHOLD", "0.50"),
         log_level=log_level,
     )

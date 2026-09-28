@@ -195,7 +195,7 @@ def test_upload_process_persists_page_text_and_detects_duplicate(
         )
         assert extraction_response.status_code == 200
         groups = extraction_response.json()["groups"]
-        assert len(groups) == 5
+        assert len(groups) == 7
         assert all(group["status"] == "SUCCEEDED" for group in groups)
         assert all(group["validated_payload"] is not None for group in groups)
         repeated_process_response = client.post(

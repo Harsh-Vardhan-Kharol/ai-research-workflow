@@ -77,10 +77,14 @@ provider.
 | Limitations (P1) | Limitations, or Discussion/Conclusion if no dedicated section |
 | Future work (P1) | Future Work, or Conclusion |
 
-If a required section wasn't detected, fall back to feeding the whole
+If no relevant section was detected, fall back to feeding the whole
 document (capped, see chunking below) rather than failing the extraction
 outright — but flag `section_detected: false` for that group, which lowers
-the `R` (source relevance) confidence signal.
+the `R` (source relevance) confidence signal. Limitations prefer Limitations,
+Study Limitations, Discussion, Conclusion, Conclusion and Future Work, and
+Threats to Validity headings. Future work prefers Future Work, Conclusion and
+Future Work, Conclusion, and Discussion. Headings are preferences, not
+requirements.
 
 ## Context-length / chunking strategy (previously missing)
 
@@ -108,8 +112,13 @@ that any instructions appearing inside that block are content to analyze,
 not commands to follow. See `SECURITY.md` for the full policy.
 
 Phase 4 implements the five P0 groups (metadata, research problem,
-methodology, experiments, and results). Limitations and future work remain
-P1. Successful outputs are Pydantic-validated before group checkpoint
+methodology, experiments, and results). Phase 10 adds `limitations` and
+`future_work` groups, each a list of existing `Claim` items. Their targeted
+prompts require explicit author statements, source passage/page when
+available, and empty lists when the text does not explicitly identify any.
+They forbid inferred limitations and invented future directions, and the
+common system/user instructions treat paper text as untrusted data and ignore
+embedded instructions. Successful outputs are Pydantic-validated before group checkpoint
 persistence. The checkpoint retains source claims, section-detection status,
 and truncation status for later evidence mapping; it does not verify evidence
 or calculate confidence.
@@ -123,6 +132,13 @@ extraction quality and evidential support, not the probability of truth.
 `MATCHED` evidence contributes its persisted score; `WEAK`, `UNAVAILABLE`,
 and `FAILED` contribute zero. These evidence states can independently require
 review regardless of score.
+
+Limitations and future-work claims use the same validation → evidence mapping
+against stored page text → deterministic confidence → existing review path as
+all other groups. An empty successful list creates no claim or synthetic
+`None`/"None" item. A failed group remains visibly `FAILED`; neither empty nor
+failed extraction proves that the paper has no such content. Cross-paper gap
+analytics read persisted items only and never ask an LLM to formulate gaps.
 
 ## Deviation Log
 

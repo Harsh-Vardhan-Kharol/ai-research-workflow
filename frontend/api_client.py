@@ -123,10 +123,13 @@ class ResearchFlowApi:
         data = self._request("POST", "/analytics/compare", json={"paper_ids": paper_ids})
         required = (
             "selected_papers", "dimensions", "pairwise_differences",
-            "missing_information", "patterns",
+            "missing_information", "patterns", "limitations", "future_work",
+            "gap_candidates",
         )
         self._require_keys(data, *required)
-        if any(not isinstance(data[key], list) for key in required):
+        if any(not isinstance(data[key], list) for key in required[:5]) or any(
+            not isinstance(data[key], dict) for key in ("limitations", "future_work")
+        ) or not isinstance(data["gap_candidates"], list):
             raise ApiClientError("The backend returned malformed comparison data.")
         return data
 

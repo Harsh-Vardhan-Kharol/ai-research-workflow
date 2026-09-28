@@ -76,6 +76,9 @@ Unique constraint: (paper_id, group_name). Failed groups contain no provider
 payload. Successful payloads include model-proposed value, source text, page,
 and section claims; those claims are not evidence-verified.
 
+Phase 10 adds `limitations` and `future_work` as group names using this same
+checkpoint and the existing Claim JSON shape. No columns or tables are added.
+
 ### extractions
 One row per extracted **item** (scalar field = 1 row; list field = N rows,
 one per list element). Phase 5 materializes non-null claims from the validated

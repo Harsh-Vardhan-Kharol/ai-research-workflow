@@ -28,10 +28,10 @@
 15. A reliable, repeatable end-to-end local demo (see `DEMO_GUIDE.md`).
 
 ### P1 — Fast-follow (build only after P0 is fully working and demoed)
-16. Limitations extraction.
-17. Future-work extraction.
-18. Cross-paper research-pattern analytics (method/dataset/model/metric/
-    limitation frequency, year trends) beyond the 2–3 paper comparison view.
+16. Limitations extraction (implemented in Phase 10).
+17. Future-work extraction (implemented in Phase 10).
+18. Broader cross-paper analytics beyond the comparison endpoint, including
+    year trends.
 19. Re-analyze endpoint (re-run extraction on an already-uploaded paper).
 20. Review-history display (audit trail of prior review actions).
 
@@ -68,8 +68,19 @@
 - 2026-09-28: Phase 9 implements a deterministic multi-paper comparison over
   persisted extraction rows. It preserves original values and extraction IDs,
   exposes confidence/review state, requires READY papers, and does not call an
-  LLM. Limitations remain unavailable because that dimension is not yet
-  persisted by the extraction schema.
+  LLM. Phase 10 adds validated limitations and future-work groups and
+  deterministic, scoped gap-candidate analytics over structured records.
+
+## Phase 10 scope
+
+- Extract only explicitly stated limitations and future-work directions using
+  `limitations` and `future_work` groups in the existing Claim model.
+- Empty successful lists mean no explicit item was returned; failed groups
+  remain `FAILED`. Neither state asserts that the paper has no limitation or
+  future work.
+- Report recurring values, coverage and concentration patterns, and scoped
+  potential gap candidates from persisted claims. A candidate is not a
+  confirmed or field-wide research gap. No LLM generates gap claims.
 
 ## Explicit non-goals (do not build, even if "easy")
 

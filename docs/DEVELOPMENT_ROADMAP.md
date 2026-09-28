@@ -53,7 +53,8 @@ The Phase 9 deterministic multi-paper comparison is implemented at
 `POST /api/v1/analytics/compare` with a Streamlit comparison view. It reads
 READY papers' persisted structured extraction items, retains paper and
 extraction traceability, and does not use an LLM or add a database table.
-Limitations remain unavailable until extraction persistence supports them.
+Phase 10 extends that same endpoint with persisted limitations and future-work
+claims and deterministic scoped gap-candidate analysis. No table is added.
 
 If time runs out before day 13, stop at the P0 checkpoint — that version is
 demo-safe on its own and must never be left broken in favor of partially
@@ -76,3 +77,7 @@ built once the structured records it consumes exist.
 - 2026-09-28: Phase 6 resolves zero-evidence handling: preserve the weighted
   score and require review independently for unavailable, weak, or failed
   evidence. The next roadmap phase is the human review workflow.
+- 2026-09-29: Phase 10 adds limitations/future-work extraction through the
+  shared claim pipeline and configurable deterministic candidate thresholds
+  (70% concentration, less than 50% sparse coverage by default). Candidates
+  are scoped observations, never confirmed field-wide gaps.

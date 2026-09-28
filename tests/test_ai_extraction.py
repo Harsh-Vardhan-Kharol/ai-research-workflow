@@ -61,6 +61,8 @@ def payload_for_group(group: str) -> dict:
             "evaluation_metrics": [],
         },
         "results": {"key_results": [claim("An outcome", "We find X.", 3, "Results")]},
+        "limitations": {"limitations": [claim("Small sample size", "The study is limited by its small sample size.", 4, "Study Limitations")]},
+        "future_work": {"future_work": [claim("Evaluate on larger datasets", "Future work will evaluate the method on larger datasets.", 5, "Future Work")]},
     }
     return schemas[group]
 
@@ -203,6 +205,8 @@ def make_pdf(path: Path) -> None:
         "Title: Sample paper\nAbstract\nA short abstract.",
         "Introduction\nWe address X.\n\nMethodology\nWe use a method.",
         "Results\nWe find X.",
+        "Study Limitations\nThe study is limited by its small sample size.",
+        "Future Work\nFuture work will evaluate the method on larger datasets.",
     ):
         page = document.new_page()
         page.insert_text((72, 72), text)
@@ -232,13 +236,13 @@ def test_sectioned_paper_to_validated_group_persistence(tmp_path) -> None:
             "SELECT status FROM papers WHERE id = ?", (paper_id,)
         ).fetchone()
         assert paper["status"] == "READY"
-        assert len(get_paper_pages(connection, paper_id)) == 3
+        assert len(get_paper_pages(connection, paper_id)) == 5
         section_names = {
             row["section_name"] for row in get_paper_sections(connection, paper_id)
         }
-        assert section_names >= {"Introduction", "Methodology", "Results"}
+        assert section_names >= {"Introduction", "Methodology", "Results", "Study Limitations", "Future Work"}
         groups = get_extraction_groups(connection, paper_id)
-        assert len(groups) == 5
+        assert len(groups) == 7
         assert all(row["status"] == "SUCCEEDED" for row in groups)
         assert all(row["validated_payload"] for row in groups)
         encoded = next(
@@ -249,7 +253,14 @@ def test_sectioned_paper_to_validated_group_persistence(tmp_path) -> None:
         persisted = json.loads(encoded)
         assert persisted["title"]["value"] == "Sample paper"
         extractions = get_extractions_for_paper(connection, paper_id)
-        assert len(extractions) == 7
+        assert len(extractions) == 9
+        for field_name, expected_page in (("limitations", 4), ("future_work", 5)):
+            item = next(row for row in extractions if row["field_name"] == field_name)
+            evidence = get_extraction_with_evidence(connection, item["id"])
+            assert evidence["match_status"] == "MATCHED"
+            assert evidence["page_number"] == expected_page
+            assert item["confidence_score"] is not None
+            assert item["status"] == "ACCEPTED"
         methodology = next(
             row for row in extractions if row["field_name"] == "methodology"
         )
@@ -296,7 +307,7 @@ def test_invalid_and_unavailable_groups_fail_without_raw_storage(tmp_path) -> No
         ).fetchone()
         assert paper["status"] == "READY"
         assert paper["failure_reason"] == "partial_ai_extraction"
-        assert len(get_paper_pages(connection, paper_id)) == 3
+        assert len(get_paper_pages(connection, paper_id)) == 5
     finally:
         connection.close()
 
@@ -340,7 +351,7 @@ def test_partial_evidence_failure_keeps_other_items_and_claims(
         ).fetchone()
         assert tuple(method) == ("FAILED", "malformed_source", "A method")
         assert connection.execute("SELECT COUNT(*) FROM extractions").fetchone()[0] > 1
-        assert len(get_paper_pages(connection, paper_id)) == 3
+        assert len(get_paper_pages(connection, paper_id)) == 5
     finally:
         connection.close()
 
@@ -376,8 +387,8 @@ def test_evidence_persistence_failure_preserves_pages_and_ai_groups(
         ).fetchone()
         assert paper["status"] == "FAILED"
         assert paper["failure_reason"] == "evidence_persistence_failed"
-        assert len(get_paper_pages(connection, paper_id)) == 3
-        assert len(get_extraction_groups(connection, paper_id)) == 5
+        assert len(get_paper_pages(connection, paper_id)) == 5
+        assert len(get_extraction_groups(connection, paper_id)) == 7
         assert connection.execute(
             "SELECT COUNT(*) FROM extractions WHERE paper_id = ?", (paper_id,)
         ).fetchone()[0] == 0

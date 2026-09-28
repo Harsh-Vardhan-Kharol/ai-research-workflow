@@ -9,6 +9,14 @@ API tests cover the comparison schema and error envelope; frontend tests cover
 request construction, response validation, and traceable render transformations.
 Streamlit browser rendering is not asserted.
 
+Phase 10 tests the explicit limitations/future-work prompt constraints and
+strict Claim schemas, the shared extraction/evidence/confidence persistence
+path, existing review actions for these groups, deterministic recurrence,
+concentration/sparsity/coverage candidates, configurable thresholds, traceable
+candidate records, API compatibility, and frontend candidate transformations.
+Analytics fixtures are synthetic and make no external or LLM gap-generation
+calls.
+
 ## Unit tests (`tests/unit/`)
 
 | Subsystem | Cases | Acceptance criteria |
@@ -21,6 +29,7 @@ Streamlit browser rendering is not asserted.
 | Database repository | insert/read/update/delete for every table, cascade delete | Cascades verified by asserting child rows are gone after parent delete |
 | Analytics | frequency counts against a fixture set of extractions | Counts match hand-computed expected values |
 | Phase 9 comparison | normalization, selection, frequencies, pairwise differences, missing fields, patterns, and traceability | Deterministic results retain original values, confidence/review metadata, and source paper/extraction IDs |
+| Phase 10 gap analytics | limitation/future-work groups, recurring values, concentration, sparse dimensions, method/dataset co-occurrence, thresholds, and candidate traceability | Claims use existing validation/evidence/confidence/review flow; candidates remain selected-literature-scoped and machine-traceable |
 
 ## Integration tests (`tests/integration/`)
 

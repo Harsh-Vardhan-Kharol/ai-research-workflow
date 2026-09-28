@@ -94,6 +94,12 @@ extraction row because this is one explainable result per claim; it avoids a
 redundant confidence table. `status` is `PENDING_REVIEW` when review is
 required and `ACCEPTED` otherwise. Human review actions remain a later phase.
 
+Phase 10 limitation and future-work items use this same formula, signals,
+levels, and routing. Their section relevance set includes the headings listed
+in `AI_ARCHITECTURE.md`. The weights and meanings of S, E, R, and K do not
+change. No confidence is created for an empty list; every non-null claim is
+scored after its evidence record is persisted.
+
 ## Input validation and failures
 
 Signals and evidence scores must be finite numbers in `[0, 1]`; booleans are

@@ -44,3 +44,25 @@ def pairwise_rows(comparison: dict[str, Any], papers: dict[int, dict[str, Any]])
                 "Shared": ", ".join(dimension.get("shared_values", [])) or "—",
             })
     return result
+
+
+def gap_candidate_rows(
+    candidates: list[dict[str, Any]], papers: dict[int, dict[str, Any]] | None = None
+) -> list[dict[str, Any]]:
+    """Flatten candidate evidence for display while retaining traceability."""
+    papers = papers or {}
+    return [{
+        "Type": candidate.get("type"),
+        "Title": candidate.get("title"),
+        "Scope": candidate.get("scope"),
+        "Basis": candidate.get("basis"),
+        "Paper IDs": candidate.get("supporting_paper_ids", []),
+        "Papers": [
+            papers.get(paper_id, {}).get("title")
+            or papers.get(paper_id, {}).get("file_name")
+            or f"Paper #{paper_id}"
+            for paper_id in candidate.get("supporting_paper_ids", [])
+        ],
+        "Extraction IDs": candidate.get("supporting_extraction_ids", []),
+        "Sources": candidate.get("sources", []),
+    } for candidate in candidates]

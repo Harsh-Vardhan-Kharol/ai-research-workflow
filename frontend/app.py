@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+import sys
 from typing import Any
+
+# Streamlit executes this file as a script and may put only ``frontend/`` on
+# sys.path. The frontend's absolute package imports need the repository root.
+_REPOSITORY_ROOT = str(Path(__file__).resolve().parent.parent)
+if _REPOSITORY_ROOT not in sys.path:
+    sys.path.insert(0, _REPOSITORY_ROOT)
 
 import streamlit as st
 
@@ -11,7 +19,7 @@ from frontend.components.confidence_display import render_confidence
 from frontend.components.evidence_display import render_evidence
 from frontend.components.extraction_card import group_extractions, render_extraction_identity
 from frontend.components.review_controls import render_review_controls
-from frontend.components.comparison_view import frequency_rows, pairwise_rows
+from frontend.components.comparison_view import frequency_rows, pairwise_rows, gap_candidate_rows
 
 
 def api() -> ResearchFlowApi:
@@ -205,13 +213,14 @@ def comparison_page(client: ResearchFlowApi) -> None:
         "evaluation_metrics": "Evaluation metrics",
         "key_results": "Key results",
         "limitations": "Limitations",
+        "future_work": "Future work",
     }
     st.subheader("Structured dimensions")
     for dimension in comparison.get("dimensions", []):
         label = labels.get(dimension["name"], dimension["name"].replace("_", " ").title())
         with st.expander(label, expanded=dimension["name"] in {"methodology_models", "datasets", "evaluation_metrics"}):
             if not dimension.get("available"):
-                st.info("Unavailable: limitations are not part of the persisted extraction schema.")
+                st.info("Unavailable: this dimension is not part of the persisted extraction schema.")
                 continue
             rows = frequency_rows(dimension, paper_map)
             if not rows:
@@ -247,6 +256,35 @@ def comparison_page(client: ResearchFlowApi) -> None:
             st.write(f"- {pattern['message']} · Paper IDs: {', '.join(map(str, pattern['paper_ids']))}")
     else:
         st.caption("No deterministic pattern rules matched this selection.")
+
+    for key, heading in (("limitations", "Limitations"), ("future_work", "Future Work")):
+        summary = comparison.get(key, {})
+        st.subheader(heading)
+        if not summary.get("available"):
+            st.info(f"{heading} extraction data is unavailable.")
+            continue
+        frequencies = summary.get("frequencies", [])
+        repeated = [item for item in frequencies if item.get("count", 0) >= 2]
+        if not repeated:
+            st.caption(f"No repeated {heading.lower()} values across the selected papers.")
+        for item in repeated:
+            st.markdown(f"**{', '.join(item.get('original_values', []))}** · {item.get('count')} papers")
+            st.write(f"Paper IDs: {', '.join(map(str, item.get('paper_ids', [])))}")
+            st.json(item.get("sources", []))
+
+    st.subheader("Potential Gap Candidates")
+    candidates = comparison.get("gap_candidates", [])
+    if not candidates:
+        st.caption("No deterministic gap-candidate rules matched this selection.")
+    for candidate, row in zip(candidates, gap_candidate_rows(candidates, paper_map)):
+        with st.container(border=True):
+            st.markdown(f"**Potential Gap Candidate · {candidate.get('title', 'Untitled')}**")
+            st.caption(f"Type: {row['Type']} · Scope: {row['Scope']}")
+            st.write(candidate.get("description", ""))
+            st.markdown(f"**Basis:** {row['Basis']}")
+            st.write(f"Supporting papers: {', '.join(row['Papers'])} · IDs {', '.join(map(str, row['Paper IDs']))}")
+            st.write(f"Supporting extraction records: {', '.join(map(str, row['Extraction IDs']))}")
+            st.json({"relevant_values": candidate.get("relevant_values", []), "sources": row["Sources"]})
 
 
 def main() -> None:

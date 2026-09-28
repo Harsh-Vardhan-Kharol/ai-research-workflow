@@ -8,7 +8,7 @@ import pytest
 from frontend.api_client import ApiClientError, ResearchFlowApi
 from frontend.components.extraction_card import group_extractions
 from frontend.components.review_controls import validate_comment, validate_edit
-from frontend.components.comparison_view import frequency_rows, pairwise_rows
+from frontend.components.comparison_view import frequency_rows, pairwise_rows, gap_candidate_rows
 
 
 class FakeResponse:
@@ -94,7 +94,8 @@ def test_extractions_are_grouped_by_backend_group_name():
 def test_comparison_client_posts_ids_and_validates_response():
     body = {
         "selected_papers": [], "dimensions": [], "pairwise_differences": [],
-        "missing_information": [], "patterns": [],
+        "missing_information": [], "patterns": [], "limitations": {},
+        "future_work": {}, "gap_candidates": [],
     }
     session = FakeSession(FakeResponse(body=body))
     api = ResearchFlowApi("http://api.local", session=session)
@@ -126,3 +127,18 @@ def test_comparison_view_helpers_keep_paper_traceability():
                         "second_only": ["y"], "shared_values": []}],
     }]}
     assert pairwise_rows(comparison, papers)[0]["Paper A"] == "x"
+
+
+def test_gap_candidate_view_rows_preserve_basis_and_traceability():
+    candidate = {
+        "type": "DATASET_CONCENTRATION", "title": "Limited dataset diversity",
+        "scope": "Selected 3-paper comparison", "basis": "Dataset X appears in 2/3.",
+        "supporting_paper_ids": [1, 2], "supporting_extraction_ids": [10, 11],
+        "sources": [{"paper_id": 1, "extraction_id": 10}],
+    }
+    row = gap_candidate_rows([candidate], {1: {"title": "Paper A"}, 2: {"title": "Paper B"}})[0]
+    assert row["Basis"] == candidate["basis"]
+    assert row["Paper IDs"] == [1, 2]
+    assert row["Papers"] == ["Paper A", "Paper B"]
+    assert row["Extraction IDs"] == [10, 11]
+    assert row["Sources"] == candidate["sources"]

@@ -88,8 +88,23 @@ one item does not change paper status or imply that other pending items have
 been reviewed. A final decision cannot be resubmitted through the API.
 
 ### 10. Analytics / comparison
-Computed live from `extractions` at request time (no cache table). See
-`API_SPECIFICATION.md` for the analytics/comparison endpoints.
+Computed live from `extractions` at request time (no cache table). Phase 10
+adds explicit limitations and future-work claims through the existing group
+pipeline and exposes their values and source records in comparison. A
+successful empty list means no explicit claim was extracted; a failed group is
+reported as failed. Neither is converted into a "none" claim.
+
+Gap candidates are deterministic rules over selected READY papers and
+review-eligible structured items. Candidate records include rule type, basis,
+scope, relevant values, extraction IDs, paper IDs, and confidence/review
+metadata. Dataset/method concentration requires at least two papers and a
+configurable 70% share (`GAP_CONCENTRATION_THRESHOLD`). Sparse coverage
+defaults to less than 50% (`GAP_SPARSE_THRESHOLD`) and requires at least one
+reporting claim. Repeated limitations/future work require two distinct papers.
+Method/dataset absence requires each value to appear individually but no
+selected paper record to contain both. These rules describe only the selected
+structured records; they are candidates, not confirmed research gaps, and do
+not establish field-wide absence. No LLM is involved in analytics.
 
 ## Status state machine (paper-level)
 
@@ -135,3 +150,6 @@ review suggested but does not block acceptance.
   review status is terminal per item while paper-level `READY` remains
   independent. The original AI value and confidence/evidence provenance are
   retained.
+- 2026-09-29: Phase 10 adds limitations/future-work groups through the common
+  claim pipeline and deterministic comparison candidates. Existing tables,
+  confidence math, and review state semantics remain in use.

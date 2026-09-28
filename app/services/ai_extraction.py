@@ -47,6 +47,15 @@ GROUPS: dict[str, tuple[tuple[str, ...], str]] = {
         "Extract datasets, experimental setup, and evaluation metrics.",
     ),
     "results": (("results", "discussion"), "Extract the paper's key results."),
+    "limitations": (
+        ("limitations", "study limitations", "discussion", "conclusion",
+         "conclusion and future work", "threats to validity"),
+        "Extract only limitations explicitly identified by the authors. Do not infer a limitation from methods, results, or context. Return an empty list if none is explicitly reported.",
+    ),
+    "future_work": (
+        ("future work", "conclusion and future work", "conclusion", "discussion"),
+        "Extract only future directions explicitly proposed or identified by the authors. Do not turn a weakness into future work unless the paper explicitly frames it that way. Return an empty list if none is explicitly reported.",
+    ),
 }
 
 

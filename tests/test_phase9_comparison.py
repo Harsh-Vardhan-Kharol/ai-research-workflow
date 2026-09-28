@@ -129,7 +129,7 @@ def test_pairwise_differences_missingness_patterns_and_unavailable_limitations(t
         sparse = [p for p in result["patterns"] if p["rule"] == "sparse_field"]
         assert any(p["dimension"] == "research_problem_objective" for p in sparse)
         limitation = next(d for d in result["dimensions"] if d["name"] == "limitations")
-        assert limitation["available"] is False and limitation["frequencies"] == []
+        assert limitation["available"] is True and limitation["frequencies"] == []
         assert any(p["rule"] == "repeated_value" and p["normalized_value"] == "random forest" for p in result["patterns"])
         assert any(p["rule"] == "methodological_variation" for p in result["patterns"])
     finally:
