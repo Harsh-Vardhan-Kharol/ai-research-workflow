@@ -140,6 +140,31 @@ all other groups. An empty successful list creates no claim or synthetic
 failed extraction proves that the paper has no such content. Cross-paper gap
 analytics read persisted items only and never ask an LLM to formulate gaps.
 
+## Phase 11: evidence-grounded research insights
+
+`POST /analytics/insights` first invokes the Phase 9/10 comparison service.
+`build_insight_input` then allowlists selected paper labels, compact frequency
+facts, exact pairwise differences, missing-information counts, deterministic
+pattern references, potential gap-candidate references, and supporting
+extraction IDs with available confidence/review context. The package does not
+contain raw PDF/page text, filesystem paths, database records, logs, or
+credentials. Long values are bounded and marked when shortened.
+
+`InsightService` reuses the existing `ProviderAdapter`. Its JSON data block is
+escaped and explicitly marked untrusted; system instructions say to ignore
+embedded commands, disclose no prompts, invent no facts or references, and
+never upgrade a candidate to a confirmed gap. The controlled Pydantic output
+requires an insight type, separate observation and interpretation, selected
+record scope, paper IDs, and extraction IDs. Research directions require a
+separate suggested-question field and supporting pattern/candidate reference.
+
+Validation rejects malformed output, more than 10 insights, duplicates,
+unknown/mismatched IDs, type/dimension mismatch, unscoped wording, and numeric
+claims absent from the supplied package. Empty output is a successful empty
+result; provider/configuration failures are explicit API errors. AI insights
+are optional interpretation and are not authoritative research conclusions.
+They cannot override deterministic comparison, confidence, or human review.
+
 ## Deviation Log
 
 - 2026-09-28: Phase 6 resolves the earlier deferred confidence step using the

@@ -66,3 +66,29 @@ def gap_candidate_rows(
         "Extraction IDs": candidate.get("supporting_extraction_ids", []),
         "Sources": candidate.get("sources", []),
     } for candidate in candidates]
+
+
+def insight_rows(insights: list[dict[str, Any]], papers: dict[int, dict[str, Any]]) -> list[dict[str, Any]]:
+    """Prepare human-readable insight fields while preserving paper IDs."""
+    rows = []
+    for insight in insights:
+        paper_ids = insight.get("supporting_paper_ids", [])
+        rows.append({
+            "Type": insight.get("type", ""),
+            "Title": insight.get("title", ""),
+            "Observation": insight.get("observation", ""),
+            "Interpretation": insight.get("interpretation", ""),
+            "Scope": insight.get("scope", ""),
+            "Papers": [
+                papers.get(paper_id, {}).get("title")
+                or papers.get(paper_id, {}).get("file_name")
+                or f"Paper #{paper_id}"
+                for paper_id in paper_ids
+            ],
+            "Paper IDs": paper_ids,
+            "Extraction IDs": insight.get("supporting_extraction_ids", []),
+            "Pattern IDs": insight.get("supporting_pattern_ids", []),
+            "Candidate IDs": insight.get("supporting_candidate_ids", []),
+            "Suggested research question": insight.get("suggested_research_question"),
+        })
+    return rows

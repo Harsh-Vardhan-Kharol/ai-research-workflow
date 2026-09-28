@@ -166,6 +166,34 @@ pairing absence. Every result is a potential gap candidate scoped to the
 selected literature. Missing structured records do not prove that no research
 exists. The analytics is deterministic and uses no LLM.
 
+### POST /analytics/insights (Phase 11)
+
+Body: `{ "paper_ids": [int, ...] }`, with the same unique-ID, minimum-size,
+and READY-paper requirements as `/analytics/compare`. The endpoint runs the
+existing deterministic comparison and builds a compact allowlisted insight
+input package from its response. It does not read PDF text or independently
+query/persist database rows in the insight service.
+
+Success: `{ "status": "completed", "insights": [...] }`. Each insight has a
+controlled `type`, `title`, `observation`, `interpretation`, explicit `scope`,
+supporting paper and extraction IDs, and optional pattern/candidate IDs. A
+`RESEARCH_DIRECTION` also includes `suggested_research_question`, which the UI
+labels **SUGGESTED RESEARCH QUESTION**. Gap candidates remain potential
+candidates, not confirmed research gaps. Empty `insights` means generation
+completed but the supplied analytics did not support a useful interpretation.
+
+The insight output is Pydantic-validated, limited to 10 items, deduplicated,
+and checked for exact known paper/extraction/pattern/candidate references,
+paper/extraction correspondence, type/dimension alignment, selected-record
+scope language, and unsupported numeric claims. Invalid model output returns
+502 `INVALID_INSIGHT_OUTPUT`; unavailable or unconfigured AI returns 503
+`INSIGHT_PROVIDER_UNAVAILABLE`; provider timeout returns 504
+`INSIGHT_TIMEOUT`. Invalid paper selection and database failures use the same
+semantics as comparison. None of these failures affects `/analytics/compare`.
+The insight service reuses the configured `ProviderAdapter`; mock mode returns
+a valid empty insight collection. AI insights are interpretive and are not
+authoritative research conclusions.
+
 ## Deviation Log
 
 - 2026-09-27: Documented the section-detection checkpoint; page text remains

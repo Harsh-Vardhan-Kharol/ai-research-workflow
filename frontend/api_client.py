@@ -133,6 +133,17 @@ class ResearchFlowApi:
             raise ApiClientError("The backend returned malformed comparison data.")
         return data
 
+    def generate_insights(self, paper_ids: list[int]) -> dict[str, Any]:
+        data = self._request("POST", "/analytics/insights", json={"paper_ids": paper_ids})
+        if data.get("status") != "completed" or not isinstance(data.get("insights"), list):
+            raise ApiClientError("The backend returned malformed insight data.")
+        required = ("type", "title", "observation", "interpretation", "scope",
+                    "supporting_paper_ids", "supporting_extraction_ids")
+        for insight in data["insights"]:
+            if not isinstance(insight, dict) or not all(key in insight for key in required):
+                raise ApiClientError("The backend returned malformed insight data.")
+        return data
+
     def get_extraction(self, extraction_id: int) -> dict[str, Any]:
         data = self._request("GET", f"/extractions/{extraction_id}")
         return self._require_keys(data, "id", "field_value", "status", "evidence")

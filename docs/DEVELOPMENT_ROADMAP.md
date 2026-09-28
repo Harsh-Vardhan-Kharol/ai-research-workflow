@@ -81,3 +81,6 @@ built once the structured records it consumes exist.
   shared claim pipeline and configurable deterministic candidate thresholds
   (70% concentration, less than 50% sparse coverage by default). Candidates
   are scoped observations, never confirmed field-wide gaps.
+- 2026-09-29: Phase 11 adds optional AI interpretation of the deterministic
+  comparison response, a compact traceable input package, validated structured
+  insights, and explicit failure states without changing comparison behavior.

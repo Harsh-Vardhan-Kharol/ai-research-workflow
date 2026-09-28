@@ -19,7 +19,9 @@ from frontend.components.confidence_display import render_confidence
 from frontend.components.evidence_display import render_evidence
 from frontend.components.extraction_card import group_extractions, render_extraction_identity
 from frontend.components.review_controls import render_review_controls
-from frontend.components.comparison_view import frequency_rows, pairwise_rows, gap_candidate_rows
+from frontend.components.comparison_view import (
+    frequency_rows, pairwise_rows, gap_candidate_rows, insight_rows,
+)
 
 
 def api() -> ResearchFlowApi:
@@ -285,6 +287,55 @@ def comparison_page(client: ResearchFlowApi) -> None:
             st.write(f"Supporting papers: {', '.join(row['Papers'])} · IDs {', '.join(map(str, row['Paper IDs']))}")
             st.write(f"Supporting extraction records: {', '.join(map(str, row['Extraction IDs']))}")
             st.json({"relevant_values": candidate.get("relevant_values", []), "sources": row["Sources"]})
+
+    st.subheader("Research Insights")
+    st.caption("AI interpretations of the deterministic comparison. These are not authoritative research conclusions.")
+    insight_ids_key = "insight-paper-ids"
+    insight_result_key = "insight-result"
+    status_key = "insight-status"
+    existing_ids = st.session_state.get(insight_ids_key)
+    has_current_insights = existing_ids == [int(pid) for pid in selected]
+    action = "Regenerate insights" if has_current_insights else "Generate research insights"
+    if st.button(action, key="generate-research-insights"):
+        st.session_state[status_key] = "generating"
+        st.session_state.pop(insight_result_key, None)
+        try:
+            with st.spinner("Generating research insights…"):
+                result = client.generate_insights([int(pid) for pid in selected])
+            st.session_state[insight_result_key] = result
+            st.session_state[insight_ids_key] = [int(pid) for pid in selected]
+            st.session_state[status_key] = "completed"
+        except ApiClientError as exc:
+            st.session_state[status_key] = "unavailable" if exc.status_code == 503 else "failed"
+            st.session_state["insight-error"] = str(exc)
+    insight_status = st.session_state.get(status_key)
+    if insight_status == "generating":
+        st.info("Generating research insights…")
+    elif insight_status == "unavailable":
+        st.warning(f"AI insights are unavailable. Deterministic comparison results above remain available. {st.session_state.get('insight-error', '')}")
+    elif insight_status == "failed":
+        st.error(f"Insight generation failed. Deterministic comparison results above remain available. {st.session_state.get('insight-error', '')}")
+    elif insight_status == "completed" and has_current_insights:
+        st.success("Insight generation completed.")
+        insights = st.session_state.get(insight_result_key, {}).get("insights", [])
+        if not insights:
+            st.info("No evidence-grounded insights were returned for this comparison set.")
+        for insight, row in zip(insights, insight_rows(insights, paper_map)):
+            with st.container(border=True):
+                st.markdown(f"**Research Insight · {row['Title']}**")
+                st.caption(f"Type: {row['Type']}")
+                st.markdown("**OBSERVATION**")
+                st.info(row["Observation"])
+                st.markdown("**INTERPRETATION**")
+                st.write(row["Interpretation"])
+                st.markdown(f"**SCOPE** · {row['Scope']}")
+                st.write(f"**Supporting papers:** {', '.join(row['Papers'])} · IDs {', '.join(map(str, row['Paper IDs']))}")
+                st.write(f"**Supporting extraction records:** {', '.join(map(str, row['Extraction IDs']))}")
+                if row["Pattern IDs"] or row["Candidate IDs"]:
+                    st.caption(f"Analytics references · patterns: {', '.join(row['Pattern IDs']) or '—'} · gap candidates: {', '.join(row['Candidate IDs']) or '—'}")
+                if row["Suggested research question"]:
+                    st.markdown("**SUGGESTED RESEARCH QUESTION**")
+                    st.write(row["Suggested research question"])
 
 
 def main() -> None:

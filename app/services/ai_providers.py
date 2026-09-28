@@ -62,7 +62,7 @@ class HostedAPIAdapter:
                 "response_format": {
                     "type": "json_schema",
                     "json_schema": {
-                        "name": "paper_extraction",
+                        "name": json_schema.get("title", "structured_output")[:64],
                         "strict": True,
                         "schema": json_schema,
                     },
@@ -151,6 +151,8 @@ class MockProvider:
         self, system_prompt: str, user_prompt: str, json_schema: dict[str, Any]
     ) -> dict[str, Any]:
         del system_prompt, user_prompt
+        if "insights" in json_schema.get("properties", {}):
+            return {"insights": []}
         return _empty_for_schema(json_schema)
 
 

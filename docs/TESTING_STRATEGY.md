@@ -19,6 +19,14 @@ calls.
 
 ## Unit tests (`tests/unit/`)
 
+Phase 11 tests cover allowlisted insight-input construction, bounded values and
+confidence/review context, untrusted-data prompt separation, valid and malformed
+mock-provider output, output-size and duplicate controls, observation and
+interpretation requirements, type/scope/reference/numeric grounding, suggested
+research-question labeling, API selection/provider behavior, independent
+deterministic comparison, and frontend response/display transformations. The
+mock provider returns an empty valid insight list without network access.
+
 | Subsystem | Cases | Acceptance criteria |
 |---|---|---|
 | PDF parsing | valid PDF, corrupted PDF, empty-text PDF | Correct page count/text for valid; correct FAILED reason for the other two |

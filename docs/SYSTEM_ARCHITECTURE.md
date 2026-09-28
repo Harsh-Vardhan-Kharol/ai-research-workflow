@@ -1,5 +1,17 @@
 # System Architecture
 
+## Phase 11 insight path
+
+The insight route runs the existing deterministic comparison for the selected
+READY papers, converts its result into a controlled `InsightInput`, invokes
+`InsightService` through the existing provider abstraction, and validates a
+structured `InsightResponse`. The package contains compact analytical facts,
+source IDs, and confidence/review context only. It contains no PDF text and
+the insight service has no database connection. Comparison remains independently
+available if AI is missing or fails. The frontend renders observation and
+interpretation in distinct visual blocks and requires an explicit generation
+or regeneration action.
+
 ## Component overview
 
 ```

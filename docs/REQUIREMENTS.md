@@ -82,6 +82,19 @@
   potential gap candidates from persisted claims. A candidate is not a
   confirmed or field-wide research gap. No LLM generates gap claims.
 
+## Phase 11 scope
+
+- AI-assisted insights interpret only verified structured comparison results,
+  deterministic patterns, limitations/future work, and potential gap candidates.
+- Every insight separates a supported observation from a cautious
+  interpretation, names its selected-record scope, and retains validated
+  paper/extraction/pattern/candidate references.
+- Suggested research questions are explicitly labeled suggestions. Potential
+  gap candidates never become confirmed or field-wide research gaps.
+- The insight layer is optional, provider-backed through the existing adapter,
+  and never requires raw PDFs. Provider failure leaves deterministic
+  comparison available. AI insights are not authoritative conclusions.
+
 ## Explicit non-goals (do not build, even if "easy")
 
 Autonomous agent frameworks, multi-agent orchestration, GraphRAG, vector DB,
