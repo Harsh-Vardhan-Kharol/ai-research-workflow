@@ -9,7 +9,7 @@ from typing import Literal
 
 from dotenv import load_dotenv
 
-AIProvider = Literal["hosted", "local", "mock"]
+AIProvider = Literal["hosted", "mock"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,6 +17,8 @@ class Settings:
     ai_provider: AIProvider
     ai_api_key: str | None
     ai_model_name: str | None
+    ai_base_url: str
+    ai_timeout_seconds: int
     database_path: Path
     max_upload_size_mb: int
     max_ai_retries: int
@@ -41,8 +43,8 @@ def get_settings() -> Settings:
     load_dotenv(override=False)
 
     provider = os.getenv("AI_PROVIDER", "hosted").strip().lower()
-    if provider not in {"hosted", "local", "mock"}:
-        raise ValueError("AI_PROVIDER must be hosted, local, or mock")
+    if provider not in {"hosted", "mock"}:
+        raise ValueError("AI_PROVIDER must be hosted or mock")
 
     threshold_raw = os.getenv("MIN_EVIDENCE_THRESHOLD", "0.35")
     try:
@@ -61,6 +63,8 @@ def get_settings() -> Settings:
         ai_provider=provider,  # type: ignore[arg-type]
         ai_api_key=os.getenv("AI_API_KEY") or None,
         ai_model_name=os.getenv("AI_MODEL_NAME") or None,
+        ai_base_url=os.getenv("AI_BASE_URL", "").strip(),
+        ai_timeout_seconds=_positive_int("AI_TIMEOUT_SECONDS", 30),
         database_path=database_path,
         max_upload_size_mb=_positive_int("MAX_UPLOAD_SIZE_MB", 25),
         max_ai_retries=_positive_int("MAX_AI_RETRIES", 2),

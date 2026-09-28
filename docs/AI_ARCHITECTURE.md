@@ -32,7 +32,7 @@ class AIExtractionService:
     def extract_future_work(self, sections: dict[str, str]) -> FutureWorkExtraction: ...
 ```
 
-Each method: (1) builds a targeted prompt scoped to the relevant section(s)
+Each group call: (1) builds a targeted prompt scoped to the relevant section(s)
 only — never "analyze this entire paper"; (2) calls the configured provider
 adapter with structured-output enforcement; (3) returns a raw dict/JSON,
 **not yet validated** — validation happens one layer up, in the schema
@@ -52,18 +52,18 @@ class ProviderAdapter(Protocol):
                              json_schema: dict) -> dict: ...
 ```
 
-Two concrete adapters:
-- `HostedAPIAdapter` (default) — uses the provider's native structured-output
-  / tool-calling mode to force schema-conformant JSON. Retries on malformed
-  JSON up to `MAX_AI_RETRIES` (default 2) with a "repair" follow-up prompt
-  that includes the parse error.
-- `LocalOllamaAdapter` (optional, documented, not default) — same interface,
-  weaker JSON reliability; must still go through the same retry/repair path
-  and the same downstream Pydantic validation. Never bypass validation just
-  because a local model was used.
+The MVP provides `HostedAPIAdapter` for a configured OpenAI-compatible
+chat-completions endpoint and `MockProvider` for deterministic local runs.
+The hosted adapter uses structured JSON-schema output, retries transient
+provider failures up to `MAX_AI_RETRIES`, and requests repaired JSON after a
+malformed response. `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL_NAME` are
+required in hosted mode. No vendor URL, key, or model is hardcoded. Other
+backends can implement the same protocol later; a local Ollama adapter is not
+part of this phase.
 
 Provider/model selection is entirely env-var driven (`AI_PROVIDER`,
-`AI_MODEL_NAME`) — the application must never hardcode a provider.
+`AI_MODEL_NAME`, and `AI_BASE_URL`) — the application must never hardcode a
+provider.
 
 ## Extraction targeting (section-scoping rules)
 
@@ -106,3 +106,16 @@ Paper text is always wrapped in a clearly delimited data block in the prompt
 (e.g., inside `<paper_content>` tags) with an explicit system instruction
 that any instructions appearing inside that block are content to analyze,
 not commands to follow. See `SECURITY.md` for the full policy.
+
+Phase 4 implements the five P0 groups (metadata, research problem,
+methodology, experiments, and results). Limitations and future work remain
+P1. Successful outputs are Pydantic-validated before group checkpoint
+persistence. The checkpoint retains source claims, section-detection status,
+and truncation status for later evidence mapping; it does not verify evidence
+or calculate confidence.
+
+Phase 5 materializes non-null claims into `extractions` while preserving the
+AI-proposed source/page/section, then independently matches that proposal to
+stored `paper_pages` text. Only the matched source/page/section is written as
+the evidence result. Confidence fields remain unset until the confidence
+phase.

@@ -51,9 +51,9 @@ does not change the paper's own `status`.
 - **AIExtractionService** (`app/services/ai_extraction.py`): thin orchestration
   layer that calls the configured provider adapter per extraction group,
   returns raw JSON-like dicts. Never touches the database directly.
-- **Provider Adapter** (`app/services/ai_providers/`): one adapter per LLM
-  backend (hosted API default, optional local Ollama). Enforces structured
-  output (tool-calling/JSON schema) and retry-with-repair on invalid JSON.
+- **Provider Adapter** (`app/services/ai_providers.py`): provider protocol,
+  configurable OpenAI-compatible hosted adapter, and deterministic mock.
+  Enforces structured JSON-schema output and bounded retry-with-repair.
 - **Schema Validator** (`app/schemas/extraction.py`): Pydantic models; the
   only gate between AI output and persistence.
 - **Evidence Mapper** (`app/services/evidence_mapper.py`): deterministic
@@ -67,6 +67,13 @@ does not change the paper's own `status`.
   over `extractions`, computed live (no cache table).
 - **Frontend** (`frontend/`): Streamlit pages calling the FastAPI backend
   over HTTP only — no direct DB or AI access from the frontend process.
+
+Phase 4 persists validated group payloads in `ai_extraction_groups` as an
+intermediate checkpoint. Phase 5 materializes non-null claims into
+`extractions`, independently maps each source proposal against stored page
+text, and persists the match in `evidence`. The Phase 5 terminal status is
+`SCORING_CONFIDENCE`; it does not mean confidence scoring or full processing
+has completed. The proposal and matched passage remain separate fields.
 
 ## Data flow contract
 
@@ -82,3 +89,12 @@ be silently reordered.
 - 2026-09-27: Added a deterministic section-detector service. The processing
   service reads persisted page text and stores its output in `paper_sections`;
   the workflow remains at `DETECTING_SECTIONS` until AI processing exists.
+- 2026-09-27: Phase 4 adds a provider boundary, strict group schemas, and
+  validated AI group checkpoints. Hosted configuration requires a caller-
+  supplied OpenAI-compatible endpoint, model, and API key. Mock mode supports
+  deterministic tests. Extraction stops at `VALIDATING` pending later
+  evidence and confidence phases.
+- 2026-09-28: Phase 5 adds deterministic page-text evidence mapping and
+  explicit `MATCHED`/`WEAK`/`UNAVAILABLE`/`FAILED` states. Source proposals
+  remain stored separately from matched spans. Processing ends at
+  `SCORING_CONFIDENCE`; no confidence values are calculated.

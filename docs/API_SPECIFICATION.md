@@ -27,12 +27,21 @@ Triggers background processing (idempotent: if already `READY` or
 in-progress, returns 409 with current status rather than double-processing).
 - 202 -> `{ "status": "EXTRACTING_TEXT" }`
 - Successful page text is committed at `TEXT_EXTRACTED` before section
-  detection begins. Completed section detection leaves status at
-  `DETECTING_SECTIONS` until the later AI stage is implemented. Reprocessing
-  either state returns 409 with its current status.
+  detection begins. Processing then runs section detection and the five P0 AI
+  extraction groups. Evidence mapping follows extraction and processing stops
+  at `SCORING_CONFIDENCE`; confidence calculation and full processing remain
+  later phases. Papers with `partial_ai_extraction` or
+  `partial_evidence_mapping` may be retried through this endpoint; other
+  in-progress states still return 409.
 
 ### GET /papers/{paper_id}/status
 - 200 -> `{ "status": str, "failure_reason": str|null }`
+
+### GET /papers/{paper_id}/extraction-groups (Phase 4)
+Returns per-group `SUCCEEDED`/`FAILED` state, validated payload when
+successful, section-detection/truncation metadata, and a safe failure code.
+Provider output that fails schema validation is never returned as a successful
+payload. Extraction source passages and page/section claims are unverified.
 
 ### POST /papers/{paper_id}/reanalyze (P1)
 Re-runs AI extraction only (not text/section extraction) on an already
@@ -41,16 +50,17 @@ text-extracted paper. Same idempotency rule as `/process`.
 ## Extractions
 
 ### GET /papers/{paper_id}/extractions
-All extraction items for a paper, grouped by `field_name`, each with its
-confidence object (see `CONFIDENCE_SYSTEM.md` output shape) and evidence
-summary.
+Phase 5 returns normalized non-null extraction items with their original
+AI-proposed source/page/section and independently matched evidence summary.
+Confidence fields remain null until the confidence phase.
 
 ### GET /extractions/{extraction_id}
 Single extraction item, full detail.
 
 ### GET /extractions/{extraction_id}/evidence
-Evidence record for that extraction (page, section, source_text,
-evidence_score).
+Evidence record for that extraction, including both proposed and matched
+source/page/section, `evidence_score`, `page_corrected`, `match_status`, and
+failure code. Matched means traceability, not factual correctness.
 
 ### POST /extractions/{extraction_id}/review
 Body: `{ "action": "ACCEPT"|"EDIT"|"REJECT", "reviewed_value": str|null,

@@ -103,3 +103,13 @@ High/medium confidence items start directly at `ACCEPTED` (auto-accepted per
   `DETECTING_SECTIONS`, the last reached stage until AI extraction is built.
   Successful page persistence is still separately committed at
   `TEXT_EXTRACTED` before this stage starts.
+- 2026-09-27: Phase 4 runs the five P0 extraction groups independently and
+  stores only Pydantic-validated group payloads in `ai_extraction_groups`.
+  `VALIDATING` is its intermediate checkpoint; partial AI group failures are
+  retained while successful groups remain available for the evidence phase.
+- 2026-09-28: Phase 5 materializes non-null validated claims into `extractions`,
+  stores each original AI source proposal separately, then maps it against
+  persisted pages. It ends at `SCORING_CONFIDENCE`; confidence scoring and
+  `READY` remain unimplemented. Every non-null claim gets a one-to-one evidence
+  record, using explicit `UNAVAILABLE`/`FAILED` states instead of losing the
+  mapping outcome. Per-group evidence writes are transactional.

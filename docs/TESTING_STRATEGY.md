@@ -7,7 +7,7 @@
 | PDF parsing | valid PDF, corrupted PDF, empty-text PDF | Correct page count/text for valid; correct FAILED reason for the other two |
 | Section detection | standard/variant headings, numbering, capitalization, missing sections, multi-page spans, references, malformed whitespace, body prose, no headings | Correct page-aware content boundaries; graceful whole-document fallback when nothing is detected |
 | Schema validation | valid payload, missing required field, wrong type, null-for-insufficient-evidence | Valid passes; each invalid case rejected with a specific, testable error |
-| Evidence matching | exact match, paraphrased match, no match, wrong page cited | Similarity scores fall in expected bands; wrong-page triggers fallback search |
+| Evidence matching | exact, normalized whitespace, punctuation, partial, missing source, no match, invalid/missing page, multiple candidates, section/page consistency | Similarity scores fall in expected bands; invalid/missing page triggers fallback; proposed page/section are not trusted as matched location |
 | Confidence calculation | boundary values at 0.449/0.45/0.749/0.75; zero-evidence case | Exact score and level per the formula in `CONFIDENCE_SYSTEM.md`; the zero-evidence-forced-LOW question from that file resolved and tested one way or the other |
 | Database repository | insert/read/update/delete for every table, cascade delete | Cascades verified by asserting child rows are gone after parent delete |
 | Analytics | frequency counts against a fixture set of extractions | Counts match hand-computed expected values |
@@ -18,9 +18,11 @@
   correctly bounded `paper_sections` rows persist together in the pipeline.
 - PDF -> parser -> extraction (AI calls mocked to return fixed structured
   output) -> database: assert correct rows land in `extractions`.
-- extraction -> evidence -> confidence -> database: assert the full
-  deterministic chain produces the expected confidence object end-to-end
-  given a fixed extraction + fixed page text fixture.
+- validated extraction -> extraction rows -> stored page lookup -> evidence
+  mapping -> database: assert proposed provenance remains separate from the
+  matched page passage and evidence status/score are deterministic.
+- Confidence persistence and scoring integration are deferred until the
+  confidence phase.
 - Failure-path integration: corrupted PDF end-to-end results in
   `status=FAILED` with the correct `failure_reason`.
 

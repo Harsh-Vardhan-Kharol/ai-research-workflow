@@ -4,9 +4,11 @@
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `AI_PROVIDER` | yes | `hosted` | `hosted` or `local` (Ollama) or `mock` (tests) |
+| `AI_PROVIDER` | yes | `hosted` | `hosted` or `mock` (tests/local demonstration) |
 | `AI_API_KEY` | yes if `AI_PROVIDER=hosted` | — | Hosted provider API key; never commit this |
-| `AI_MODEL_NAME` | yes | provider-specific default | Model identifier passed to the adapter |
+| `AI_MODEL_NAME` | yes if `AI_PROVIDER=hosted` | — | Model identifier passed to the adapter |
+| `AI_BASE_URL` | yes if `AI_PROVIDER=hosted` | — | Configured OpenAI-compatible chat-completions endpoint |
+| `AI_TIMEOUT_SECONDS` | no | `30` | Per-request timeout |
 | `DATABASE_PATH` | no | `./data/researchflow.db` | SQLite file path |
 | `MAX_UPLOAD_SIZE_MB` | no | `25` | Upload size cap |
 | `MAX_AI_RETRIES` | no | `2` | Retry cap for malformed/timeout AI calls |
@@ -14,8 +16,9 @@
 | `MIN_EVIDENCE_THRESHOLD` | no | `0.35` | Below this, evidence_score contributes 0 to confidence |
 | `LOG_LEVEL` | no | `INFO` | `DEBUG` for full-content logging (see `SECURITY.md` caveat) |
 
-`.env.example` should list all of the above with placeholder/default
-values; `.env` itself must be in `.gitignore`.
+`.env.example` should list all of the above with placeholder/default values;
+`.env` itself must be in `.gitignore`. No vendor, model, endpoint, or key is
+hardcoded. Mock mode makes no hosted request.
 
 ## Local install & run
 
