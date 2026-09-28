@@ -26,6 +26,7 @@ from app.schemas.papers import (
     ExtractionEvidenceResponse,
     EvidenceSummary,
     PaperExtractionsResponse,
+    ExtractionItemResponse,
     PaperExtractionGroupsResponse,
     PaperProcessResponse,
     PaperStatusResponse,
@@ -275,11 +276,72 @@ def get_paper_extractions(paper_id: int) -> PaperExtractionsResponse:
             extractions.append(
                 {
                     **dict(row),
+                    "confidence_signals": (
+                        json.loads(row["confidence_signals"])
+                        if row["confidence_signals"] is not None else None
+                    ),
+                    "review_reasons": (
+                        json.loads(row["review_reasons"])
+                        if row["review_reasons"] is not None else None
+                    ),
+                    "review_required": bool(row["review_required"]),
                     "section_detected": bool(row["section_detected"]),
                     "evidence": evidence,
                 }
             )
         return PaperExtractionsResponse(paper_id=paper_id, extractions=extractions)
+    finally:
+        connection.close()
+
+
+@evidence_router.get(
+    "/extractions/{extraction_id}", response_model=ExtractionItemResponse
+)
+def get_extraction(extraction_id: int) -> ExtractionItemResponse:
+    """Return one extraction including persisted confidence and routing."""
+    connection = connect_database()
+    try:
+        row = get_extraction_with_evidence(connection, extraction_id)
+        if row is None:
+            raise ApiError(404, "EXTRACTION_NOT_FOUND", "Extraction not found.")
+        evidence = None
+        if row["match_status"] is not None:
+            evidence = EvidenceSummary(
+                proposed_source_text=row["proposed_source_text"],
+                proposed_page=row["proposed_page"],
+                proposed_section=row["proposed_section"],
+                page_number=row["page_number"],
+                section_name=row["section_name"],
+                matched_source_text=row["verified_source_text"],
+                evidence_score=row["evidence_score"],
+                page_corrected=bool(row["page_corrected"]),
+                match_status=row["match_status"],
+                failure_code=row["failure_code"],
+            )
+        return ExtractionItemResponse(
+            id=row["id"],
+            group_name=row["group_name"],
+            field_name=row["field_name"],
+            item_index=row["item_index"],
+            field_value=row["field_value"],
+            proposed_source_text=row["proposed_source_text"],
+            proposed_page=row["proposed_page"],
+            proposed_section=row["proposed_section"],
+            confidence_score=row["confidence_score"],
+            confidence_level=row["confidence_level"],
+            confidence_signals=(
+                json.loads(row["confidence_signals"])
+                if row["confidence_signals"] is not None else None
+            ),
+            review_required=bool(row["review_required"]),
+            review_reasons=(
+                json.loads(row["review_reasons"])
+                if row["review_reasons"] is not None else None
+            ),
+            status=row["status"],
+            section_detected=bool(row["section_detected"]),
+            evidence=evidence,
+        )
     finally:
         connection.close()
 

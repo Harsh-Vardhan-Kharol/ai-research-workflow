@@ -60,8 +60,14 @@ dropped (not the whole extraction) with the reason logged
 Per `EVIDENCE_SYSTEM.md`. Runs per valid extraction item.
 
 ### 7. Confidence calculation
-Per `CONFIDENCE_SYSTEM.md`. Runs per valid extraction item, using its
-evidence result.
+Per `CONFIDENCE_SYSTEM.md`. Runs per valid extraction item using its persisted
+evidence row, then stores the score, level, four signals, review-required flag,
+and stable review reasons atomically. A missing evidence row is treated as
+unavailable; a malformed evidence record fails confidence processing safely.
+Unavailable, weak, failed, or low-confidence items enter `PENDING_REVIEW`.
+Other items enter `ACCEPTED`. Confidence completion advances the paper from
+`SCORING_CONFIDENCE` to `READY`; individual pending-review items do not block
+paper readiness.
 
 ### 8. Persistence
 All `extractions` and `evidence` rows written in a single transaction per
@@ -84,13 +90,13 @@ UPLOADED -> EXTRACTING_TEXT -> TEXT_EXTRACTED -> DETECTING_SECTIONS -> EXTRACTIN
                                                     \-> FAILED
 ```
 A paper reaching `READY` may still have individual `extractions` in
-`REVIEW_REQUIRED` — this is normal and does not block `READY`.
+`PENDING_REVIEW` — this is normal and does not block `READY`.
 
 ## Extraction-item status values
 
-`PENDING_REVIEW` (only if low confidence) -> `ACCEPTED` | `EDITED` | `REJECTED`.
-High/medium confidence items start directly at `ACCEPTED` (auto-accepted per
-`CONFIDENCE_SYSTEM.md` thresholds) but remain editable later.
+`PENDING_REVIEW` (low score or weak/unavailable/failed evidence) -> `ACCEPTED`
+| `EDITED` | `REJECTED`. Other items start at `ACCEPTED`; MEDIUM confidence is
+review suggested but does not block acceptance.
 
 ## Deviation Log
 
@@ -113,3 +119,6 @@ High/medium confidence items start directly at `ACCEPTED` (auto-accepted per
   `READY` remain unimplemented. Every non-null claim gets a one-to-one evidence
   record, using explicit `UNAVAILABLE`/`FAILED` states instead of losing the
   mapping outcome. Per-group evidence writes are transactional.
+- 2026-09-28: Phase 6 computes and persists deterministic confidence per item,
+  routes weak/unavailable/failed evidence independently of score, and advances
+  successful scoring from `SCORING_CONFIDENCE` to `READY`.

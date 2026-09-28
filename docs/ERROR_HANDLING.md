@@ -25,10 +25,14 @@
 | Weak/partial passage | Best candidate score is below `MIN_EVIDENCE_THRESHOLD` | Persist actual matched span and score as `WEAK` | Evidence panel shows "evidence not strongly matched" | `EVIDENCE_MAPPED` (INFO) |
 | Malformed source / mapper failure | Source claim cannot be evaluated | Keep extraction, persist `FAILED` evidence state and safe failure code; continue other claims | Visible in evidence details | `EVIDENCE_MAPPING_FAILED` (WARNING) |
 | Evidence database error | Exception on per-group evidence write | Roll back that group transaction, preserve pages/sections/validated AI groups and earlier groups; mark paper `FAILED` for retry | "A database error occurred while saving evidence." | `EVIDENCE_PERSISTENCE_FAILED` (ERROR) |
-| Partial evidence failure | One or more claims map to `FAILED`, other groups/items map normally | Persist each item outcome; leave paper at `SCORING_CONFIDENCE` with `partial_evidence_mapping` | Failed items are visible; processing can be retried | `EVIDENCE_MAPPING_FAILED` (WARNING) |
+| Partial evidence failure | One or more claims map to `FAILED`, other groups/items map normally | Persist each item outcome; score available claims, route failed evidence to review, and reach `READY` with `partial_evidence_mapping` retained | Failed items and safe reason are visible for review | `EVIDENCE_MAPPING_FAILED` (WARNING) |
+| Missing evidence at confidence scoring | Extraction has no evidence row or has `UNAVAILABLE` evidence | Score evidence and relevance as 0, require review with `evidence_unavailable`, continue scoring | Expose score and review reason | `CONFIDENCE_SCORING_COMPLETED` (INFO) |
+| Weak/failed evidence at confidence scoring | Persisted state is `WEAK` or `FAILED` | Score evidence as 0, require review with `evidence_weak` or `evidence_mapping_failed`; failed mapping is not treated as a false claim | Expose score and review reason | `CONFIDENCE_SCORING_COMPLETED` (INFO) |
+| Invalid confidence/evidence data | Unknown state, malformed matched passage, non-finite/out-of-range number, or inconsistent evidence row | Reject the confidence run; mark the paper `FAILED` with safe `confidence_calculation_failed`; never clamp or report a high score | "Confidence could not be calculated for this paper." | `CONFIDENCE_CALCULATION_FAILED` (ERROR) |
+| Confidence database write failure | Atomic per-paper scoring transaction raises | Roll back all confidence writes and do not mark `READY`; mark paper failed with safe persistence reason if possible | "A database error occurred while saving confidence results." | `CONFIDENCE_PERSISTENCE_FAILED` (ERROR) |
 | Database errors | Exception on write | Roll back the transaction for that group only; do not corrupt already-committed groups | "A database error occurred while saving results." | `PROCESSING_FAILED` (ERROR) |
 | Duplicate paper (same hash) | Hash check on upload | 409, do not re-process | "This file has already been uploaded (paper #{id})." | `UPLOAD_REJECTED` (INFO) |
-| Partial batch failure (some extraction groups succeed, others fail) | Per-group try/except in the processing pipeline | Paper still reaches `READY` if at least metadata extraction succeeded; otherwise `FAILED` | Dashboard shows which fields are missing/failed | `PAPER_PROCESSED` (INFO, with `partial=true` if applicable) |
+| Partial extraction/mapping | Some groups fail while other groups or items persist | Score available extraction items; preserve the partial failure reason and reach `READY` if confidence persistence succeeds | Dashboard shows which fields are missing/failed | `PAPER_PROCESSED` (INFO, with `partial=true` if applicable) |
 
 ## Retry policy (summary)
 
@@ -36,6 +40,9 @@
   each request is bounded by `AI_TIMEOUT_SECONDS`.
 - Evidence matching uses only stored `paper_pages`; it does not call a model
   or external service.
+- Confidence math uses only validated extraction rows and persisted evidence;
+  malformed data fails closed, while missing evidence scores zero and routes
+  to review independently of score.
 - Failures are always scoped to the smallest unit possible (one extraction
   group, one field) — a single bad LLM call must never fail the entire
   paper if other groups succeeded.

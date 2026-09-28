@@ -8,7 +8,7 @@
 | Section detection | standard/variant headings, numbering, capitalization, missing sections, multi-page spans, references, malformed whitespace, body prose, no headings | Correct page-aware content boundaries; graceful whole-document fallback when nothing is detected |
 | Schema validation | valid payload, missing required field, wrong type, null-for-insufficient-evidence | Valid passes; each invalid case rejected with a specific, testable error |
 | Evidence matching | exact, normalized whitespace, punctuation, partial, missing source, no match, invalid/missing page, multiple candidates, section/page consistency | Similarity scores fall in expected bands; invalid/missing page triggers fallback; proposed page/section are not trusted as matched location |
-| Confidence calculation | boundary values at 0.449/0.45/0.749/0.75; zero-evidence case | Exact score and level per the formula in `CONFIDENCE_SYSTEM.md`; the zero-evidence-forced-LOW question from that file resolved and tested one way or the other |
+| Confidence calculation | all-strong/all-weak/mixed signals; boundary values immediately around 0.45 and 0.75; MATCHED/WEAK/UNAVAILABLE/FAILED/missing evidence; invalid values | Exact formula and level; zero/missing/weak/failed evidence routing independently requires review; no invalid value produces a score |
 | Database repository | insert/read/update/delete for every table, cascade delete | Cascades verified by asserting child rows are gone after parent delete |
 | Analytics | frequency counts against a fixture set of extractions | Counts match hand-computed expected values |
 
@@ -21,8 +21,9 @@
 - validated extraction -> extraction rows -> stored page lookup -> evidence
   mapping -> database: assert proposed provenance remains separate from the
   matched page passage and evidence status/score are deterministic.
-- Confidence persistence and scoring integration are deferred until the
-  confidence phase.
+- Validated extraction -> evidence mapping -> confidence scoring -> SQLite ->
+  extraction API: assert deterministic score/signals/review routing persist and
+  paper reaches `READY` without live model calls.
 - Failure-path integration: corrupted PDF end-to-end results in
   `status=FAILED` with the correct `failure_reason`.
 

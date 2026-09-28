@@ -26,9 +26,10 @@ working end-to-end.
 ## Days 8–9: Evidence + confidence
 - Evidence Mapper with `rapidfuzz` similarity.
 - Confidence Calculator per the revised formula.
-- Resolve and document the zero-evidence/LOW-forcing decision flagged in
-  `CONFIDENCE_SYSTEM.md`.
+- Resolve and document the zero-evidence review-routing decision.
 - Persistence of `extractions` + `evidence` rows.
+- Phase 6 completion: deterministic scoring, signal/reason persistence, API
+  output, and `SCORING_CONFIDENCE -> READY` transition.
 
 ## Day 10: Review workflow
 - Review endpoint + `review_records`.
@@ -64,3 +65,6 @@ built once the structured records it consumes exist.
 - 2026-09-27: Recorded the existing P0/P1 scheduling inconsistency. No scope
   change was made: comparison remains in the MVP and is sequenced after the
   extraction, evidence, and confidence data it depends on.
+- 2026-09-28: Phase 6 resolves zero-evidence handling: preserve the weighted
+  score and require review independently for unavailable, weak, or failed
+  evidence. The next roadmap phase is the human review workflow.

@@ -13,12 +13,14 @@ from app.database.repository import (
     create_paper,
     initialize_schema,
     replace_extraction_group_results,
+    set_paper_status,
 )
 from fastapi.testclient import TestClient
 from app.services.evidence_mapper import (
     EvidenceMapper,
     MalformedEvidenceSource,
 )
+from app.services.paper_processing import _score_paper_confidence
 
 
 def test_exact_match_uses_stored_page_and_resolves_consistent_section() -> None:
@@ -235,6 +237,8 @@ def test_api_exposes_proposal_and_independently_matched_evidence(
         extraction_id = connection.execute(
             "SELECT id FROM extractions WHERE paper_id = ?", (paper_id,)
         ).fetchone()[0]
+        set_paper_status(connection, paper_id, "SCORING_CONFIDENCE")
+        _score_paper_confidence(connection, paper_id)
     finally:
         connection.close()
 
@@ -243,6 +247,23 @@ def test_api_exposes_proposal_and_independently_matched_evidence(
         item = paper_response.json()["extractions"][0]
         assert item["proposed_page"] == 99
         assert item["evidence"]["page_number"] == 2
+        assert item["confidence_score"] == 0.8
+        assert item["confidence_level"] == "HIGH"
+        assert item["confidence_signals"] == {
+            "schema_validity": 1.0,
+            "evidence_strength": 1.0,
+            "source_relevance": 0.0,
+            "completeness": 1.0,
+        }
+        assert item["review_required"] is False
+        assert item["review_reasons"] == []
+        detail_response = client.get(f"/api/v1/extractions/{extraction_id}")
+        assert detail_response.status_code == 200
+        assert detail_response.json()["confidence_score"] == 0.8
+        assert (
+            detail_response.json()["confidence_signals"]
+            == item["confidence_signals"]
+        )
         evidence_response = client.get(
             f"/api/v1/extractions/{extraction_id}/evidence"
         )

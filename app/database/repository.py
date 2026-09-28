@@ -124,6 +124,24 @@ def initialize_schema(connection: sqlite3.Connection) -> None:
             ON evidence(extraction_id);
         """
     )
+    # Additive migration for databases created by Phase 4/5.
+    existing_columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(extractions)").fetchall()
+    }
+    additions = {
+        "review_required": (
+            "INTEGER NOT NULL DEFAULT 0 "
+            "CHECK (review_required IN (0, 1))"
+        ),
+        "confidence_signals": "TEXT",
+        "review_reasons": "TEXT",
+    }
+    for column, declaration in additions.items():
+        if column not in existing_columns:
+            connection.execute(
+                f"ALTER TABLE extractions ADD COLUMN {column} {declaration}"
+            )
     connection.commit()
 
 
@@ -362,7 +380,8 @@ def get_extractions_for_paper(
         connection.execute(
             """SELECT id, group_name, field_name, item_index, field_value,
                       proposed_source_text, proposed_page, proposed_section,
-                      confidence_score, confidence_level, status, section_detected
+                      confidence_score, confidence_level, confidence_signals,
+                      review_required, review_reasons, status, section_detected
                FROM extractions WHERE paper_id = ? ORDER BY id""",
             (paper_id,),
         ).fetchall()
@@ -375,10 +394,52 @@ def get_extraction_with_evidence(
     return connection.execute(
         """SELECT x.id, x.paper_id, x.group_name, x.field_name, x.item_index,
                   x.field_value, x.proposed_source_text, x.proposed_page,
-                  x.proposed_section, x.status, e.page_number, e.section_name,
+                  x.proposed_section, x.confidence_score, x.confidence_level,
+                  x.confidence_signals, x.review_required, x.review_reasons,
+                  x.status, x.section_detected, e.id AS evidence_id,
+                  e.page_number, e.section_name,
                   e.source_text AS verified_source_text, e.evidence_score,
                   e.page_corrected, e.match_status, e.failure_code
            FROM extractions AS x LEFT JOIN evidence AS e ON e.extraction_id = x.id
            WHERE x.id = ?""",
         (extraction_id,),
     ).fetchone()
+
+
+def save_confidence_results(
+    connection: sqlite3.Connection,
+    paper_id: int,
+    results: Iterable[dict[str, object]],
+    failure_reason: str | None = None,
+) -> None:
+    """Atomically persist every confidence result and advance the paper to READY."""
+    now = _now()
+    with connection:
+        for result in results:
+            cursor = connection.execute(
+                """UPDATE extractions
+                   SET confidence_score = ?, confidence_level = ?,
+                       confidence_signals = ?, review_required = ?,
+                       review_reasons = ?, status = ?, updated_at = ?
+                   WHERE id = ? AND paper_id = ?""",
+                (
+                    result["score"],
+                    result["level"],
+                    result["signals_json"],
+                    int(bool(result["review_required"])),
+                    result["review_reasons_json"],
+                    "PENDING_REVIEW" if result["review_required"] else "ACCEPTED",
+                    now,
+                    result["extraction_id"],
+                    paper_id,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise LookupError("Extraction disappeared during confidence scoring")
+        cursor = connection.execute(
+            """UPDATE papers SET status = 'READY', failure_reason = ?, updated_at = ?
+               WHERE id = ? AND status = 'SCORING_CONFIDENCE'""",
+            (failure_reason, now, paper_id),
+        )
+        if cursor.rowcount != 1:
+            raise LookupError("Paper is not awaiting confidence scoring")

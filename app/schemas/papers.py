@@ -60,6 +60,9 @@ class ExtractionItemResponse(BaseModel):
     proposed_section: str | None
     confidence_score: float | None
     confidence_level: str | None
+    confidence_signals: dict[str, float] | None
+    review_required: bool
+    review_reasons: list[str] | None
     status: str
     section_detected: bool
     evidence: EvidenceSummary | None

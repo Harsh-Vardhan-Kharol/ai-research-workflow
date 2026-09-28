@@ -16,8 +16,9 @@
 7. Evidence mapping (page, section, source passage) for every non-null
    extracted item, with similarity-based validation (see `EVIDENCE_SYSTEM.md`).
 8. Deterministic confidence scoring per extracted item (see `CONFIDENCE_SYSTEM.md`).
-9. Low-confidence review workflow: Accept / Edit / Reject, with original value,
-   reviewed value, reviewer comment, and timestamp retained.
+9. Deterministic review routing for low-confidence or weak/unavailable/failed
+   evidence items, plus the later Accept / Edit / Reject workflow with original
+   value, reviewed value, reviewer comment, and timestamp retained.
 10. SQLite persistence per `DATABASE_SCHEMA.md`.
 11. Dashboard: paper list, paper detail view with confidence-badged extractions.
 12. Evidence viewer: click an extraction, see its supporting passage.

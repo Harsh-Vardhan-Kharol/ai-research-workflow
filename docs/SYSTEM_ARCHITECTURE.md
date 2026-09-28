@@ -38,7 +38,7 @@ UPLOADED -> EXTRACTING_TEXT -> TEXT_EXTRACTED -> DETECTING_SECTIONS -> EXTRACTIN
    -> VALIDATING -> MAPPING_EVIDENCE -> SCORING_CONFIDENCE -> READY
                                                     \-> FAILED (terminal, with reason)
 ```
-`READY` papers may have individual extractions flagged `REVIEW_REQUIRED`; this
+`READY` papers may have individual extractions flagged `PENDING_REVIEW`; this
 does not change the paper's own `status`.
 
 ## Component responsibilities
@@ -72,8 +72,10 @@ Phase 4 persists validated group payloads in `ai_extraction_groups` as an
 intermediate checkpoint. Phase 5 materializes non-null claims into
 `extractions`, independently maps each source proposal against stored page
 text, and persists the match in `evidence`. The Phase 5 terminal status is
-`SCORING_CONFIDENCE`; it does not mean confidence scoring or full processing
-has completed. The proposal and matched passage remain separate fields.
+`SCORING_CONFIDENCE`; Phase 6 then scores each extraction from its persisted
+evidence and advances successful papers to `READY`. Review-required claims
+remain `PENDING_REVIEW` without blocking paper readiness. The proposal and
+matched passage remain separate fields.
 
 ## Data flow contract
 
@@ -98,3 +100,6 @@ be silently reordered.
   explicit `MATCHED`/`WEAK`/`UNAVAILABLE`/`FAILED` states. Source proposals
   remain stored separately from matched spans. Processing ends at
   `SCORING_CONFIDENCE`; no confidence values are calculated.
+- 2026-09-28: Phase 6 adds deterministic weighted scoring, stored signal
+  breakdown and review reasons, separate evidence-driven routing, and the
+  `SCORING_CONFIDENCE -> READY` transition. No additional model call is used.

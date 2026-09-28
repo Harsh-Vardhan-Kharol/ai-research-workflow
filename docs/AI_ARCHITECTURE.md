@@ -117,5 +117,14 @@ or calculate confidence.
 Phase 5 materializes non-null claims into `extractions` while preserving the
 AI-proposed source/page/section, then independently matches that proposal to
 stored `paper_pages` text. Only the matched source/page/section is written as
-the evidence result. Confidence fields remain unset until the confidence
-phase.
+the evidence result. Phase 6 computes deterministic confidence from this
+persisted evidence; it never asks the model for confidence. The score estimates
+extraction quality and evidential support, not the probability of truth.
+`MATCHED` evidence contributes its persisted score; `WEAK`, `UNAVAILABLE`,
+and `FAILED` contribute zero. These evidence states can independently require
+review regardless of score.
+
+## Deviation Log
+
+- 2026-09-28: Phase 6 resolves the earlier deferred confidence step using the
+  actual Phase 5 evidence record and preserves deterministic-only scoring.

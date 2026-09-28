@@ -231,7 +231,7 @@ def test_sectioned_paper_to_validated_group_persistence(tmp_path) -> None:
         paper = connection.execute(
             "SELECT status FROM papers WHERE id = ?", (paper_id,)
         ).fetchone()
-        assert paper["status"] == "SCORING_CONFIDENCE"
+        assert paper["status"] == "READY"
         assert len(get_paper_pages(connection, paper_id)) == 3
         section_names = {
             row["section_name"] for row in get_paper_sections(connection, paper_id)
@@ -253,8 +253,8 @@ def test_sectioned_paper_to_validated_group_persistence(tmp_path) -> None:
         methodology = next(
             row for row in extractions if row["field_name"] == "methodology"
         )
-        assert methodology["status"] == "EXTRACTED"
-        assert methodology["confidence_score"] is None
+        assert methodology["status"] == "ACCEPTED"
+        assert methodology["confidence_score"] is not None
         assert methodology["proposed_source_text"] == "We use a method."
         evidence = get_extraction_with_evidence(connection, methodology["id"])
         assert evidence["match_status"] == "MATCHED"
@@ -294,7 +294,7 @@ def test_invalid_and_unavailable_groups_fail_without_raw_storage(tmp_path) -> No
         paper = connection.execute(
             "SELECT status, failure_reason FROM papers WHERE id = ?", (paper_id,)
         ).fetchone()
-        assert paper["status"] == "SCORING_CONFIDENCE"
+        assert paper["status"] == "READY"
         assert paper["failure_reason"] == "partial_ai_extraction"
         assert len(get_paper_pages(connection, paper_id)) == 3
     finally:
@@ -331,7 +331,7 @@ def test_partial_evidence_failure_keeps_other_items_and_claims(
         paper = connection.execute(
             "SELECT status, failure_reason FROM papers WHERE id = ?", (paper_id,)
         ).fetchone()
-        assert paper["status"] == "SCORING_CONFIDENCE"
+        assert paper["status"] == "READY"
         assert paper["failure_reason"] == "partial_evidence_mapping"
         method = connection.execute(
             """SELECT e.match_status, e.failure_code, x.field_value

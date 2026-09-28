@@ -187,7 +187,7 @@ def test_upload_process_persists_page_text_and_detects_duplicate(
         assert process_response.json()["status"] == "EXTRACTING_TEXT"
         status_response = client.get(f"/api/v1/papers/{paper_id}/status")
         assert status_response.json() == {
-            "status": "SCORING_CONFIDENCE",
+            "status": "READY",
             "failure_reason": None,
         }
         extraction_response = client.get(
@@ -204,8 +204,16 @@ def test_upload_process_persists_page_text_and_detects_duplicate(
         assert repeated_process_response.status_code == 409
         assert (
             repeated_process_response.json()["error"]["current_status"]
-            == "SCORING_CONFIDENCE"
+            == "READY"
         )
+        scored_response = client.get(
+            f"/api/v1/papers/{paper_id}/extractions"
+        )
+        assert scored_response.status_code == 200
+        scored_items = scored_response.json()["extractions"]
+        # The explicit mock provider emits unknown/null values, so this paper
+        # legitimately has no extraction items to score.
+        assert scored_items == []
 
     connection = connect_database(database_path)
     try:

@@ -21,6 +21,9 @@ from app.database.repository import (
     save_extraction_group,
     save_sections_and_status,
     set_paper_status,
+    save_confidence_results,
+    get_extractions_for_paper,
+    get_extraction_with_evidence,
 )
 from app.services.pdf_processor import (
     ExtractedPage,
@@ -35,6 +38,12 @@ from app.services.evidence_mapper import (
     EvidenceMapper,
     EvidenceResult,
     MalformedEvidenceSource,
+)
+from app.services.confidence import (
+    ConfidenceInputError,
+    calculate_confidence,
+    route_for_review,
+    validate_evidence,
 )
 
 logger = logging.getLogger(__name__)
@@ -179,7 +188,47 @@ def process_paper_text(
                         "FAILED",
                         "evidence_persistence_failed",
                     )
-                except sqlite3.Error:
+                except (sqlite3.Error, LookupError):
+                    logger.exception(
+                        "PAPER_FAILURE_STATE_WRITE_FAILED",
+                        extra={"paper_id": paper_id},
+                    )
+        current_paper = get_paper(connection, paper_id)
+        if (
+            current_paper is not None
+            and current_paper["status"] == "SCORING_CONFIDENCE"
+        ):
+            try:
+                _score_paper_confidence(connection, paper_id)
+            except (ConfidenceInputError, LookupError, ValueError, TypeError):
+                connection.rollback()
+                logger.exception(
+                    "CONFIDENCE_CALCULATION_FAILED",
+                    extra={
+                        "paper_id": paper_id,
+                        "failure_reason": "invalid_confidence_input",
+                    },
+                )
+                try:
+                    set_paper_status(
+                        connection, paper_id, "FAILED", "confidence_calculation_failed"
+                    )
+                except (sqlite3.Error, LookupError):
+                    logger.exception(
+                        "PAPER_FAILURE_STATE_WRITE_FAILED",
+                        extra={"paper_id": paper_id},
+                    )
+            except sqlite3.Error:
+                connection.rollback()
+                logger.exception(
+                    "CONFIDENCE_PERSISTENCE_FAILED",
+                    extra={"paper_id": paper_id},
+                )
+                try:
+                    set_paper_status(
+                        connection, paper_id, "FAILED", "confidence_persistence_failed"
+                    )
+                except (sqlite3.Error, LookupError):
                     logger.exception(
                         "PAPER_FAILURE_STATE_WRITE_FAILED",
                         extra={"paper_id": paper_id},
@@ -400,4 +449,88 @@ def _map_paper_evidence(
         failure_reason = None
     set_paper_status(
         connection, paper_id, "SCORING_CONFIDENCE", failure_reason
+    )
+
+
+_EXPECTED_SECTIONS = {
+    "research_problem": {"abstract", "introduction"},
+    "methodology": {"method", "methodology", "methods", "materials and methods",
+                    "proposed method", "approach"},
+    "experiments": {"experiments", "experimental setup", "datasets"},
+    "results": {"results", "discussion"},
+    "metadata": {"abstract"},
+}
+_PLACEHOLDERS = {
+    "n/a", "na", "not applicable", "not reported", "not specified",
+    "not available", "unknown", "null", "none", "insufficient information",
+}
+
+
+def _source_relevance(extraction: sqlite3.Row, evidence: sqlite3.Row) -> float:
+    if evidence["page_number"] is None:
+        return 0.0
+    if extraction["group_name"] == "metadata" and evidence["page_number"] == 1:
+        return 1.0
+    if not extraction["section_detected"]:
+        return 0.5
+    section = evidence["section_name"]
+    expected = _EXPECTED_SECTIONS.get(extraction["group_name"], set())
+    return float(isinstance(section, str) and section.strip().casefold() in expected)
+
+
+def _completeness(field_value: object) -> float:
+    if not isinstance(field_value, str) or not field_value.strip():
+        raise ConfidenceInputError("extraction value must be non-empty text")
+    normalized = " ".join(field_value.casefold().split()).strip(" .,:;-")
+    return 0.0 if normalized in _PLACEHOLDERS else 1.0
+
+
+def _score_paper_confidence(connection: sqlite3.Connection, paper_id: int) -> None:
+    """Score persisted extraction/evidence pairs and atomically mark the paper READY."""
+    if get_paper(connection, paper_id) is None:
+        raise LookupError("paper does not exist")
+    results: list[dict[str, object]] = []
+    for extraction in get_extractions_for_paper(connection, paper_id):
+        evidence = get_extraction_with_evidence(connection, extraction["id"])
+        if evidence is None:
+            raise LookupError("extraction does not exist")
+        evidence_state, evidence_strength = validate_evidence(
+            {
+                "match_status": evidence["match_status"],
+                "evidence_score": evidence["evidence_score"],
+                "source_text": evidence["verified_source_text"],
+                "page_number": evidence["page_number"],
+                "section_name": evidence["section_name"],
+                "page_corrected": evidence["page_corrected"],
+                "failure_code": evidence["failure_code"],
+            } if evidence["evidence_id"] is not None else None,
+            min_evidence_threshold=get_settings().min_evidence_threshold,
+        )
+        result = calculate_confidence(
+            {
+                # Phase 4 stores only successfully validated claims. The schema
+                # does not retain a repair-attempt signal, so valid items score 1.
+                "schema_validity": 1.0,
+                "evidence_strength": evidence_strength,
+                "source_relevance": _source_relevance(extraction, evidence),
+                "completeness": _completeness(extraction["field_value"]),
+            }
+        )
+        result = route_for_review(result, evidence_state)
+        results.append(
+            {
+                "extraction_id": extraction["id"],
+                "score": result.score,
+                "level": result.level,
+                "review_required": result.review_required,
+                "signals_json": json.dumps(result.signals, sort_keys=True),
+                "review_reasons_json": json.dumps(result.review_reasons),
+            }
+        )
+    paper = get_paper(connection, paper_id)
+    failure_reason = paper["failure_reason"]
+    save_confidence_results(connection, paper_id, results, failure_reason)
+    logger.info(
+        "CONFIDENCE_SCORING_COMPLETED",
+        extra={"paper_id": paper_id, "extraction_count": len(results)},
     )

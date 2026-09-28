@@ -28,11 +28,10 @@ in-progress, returns 409 with current status rather than double-processing).
 - 202 -> `{ "status": "EXTRACTING_TEXT" }`
 - Successful page text is committed at `TEXT_EXTRACTED` before section
   detection begins. Processing then runs section detection and the five P0 AI
-  extraction groups. Evidence mapping follows extraction and processing stops
-  at `SCORING_CONFIDENCE`; confidence calculation and full processing remain
-  later phases. Papers with `partial_ai_extraction` or
-  `partial_evidence_mapping` may be retried through this endpoint; other
-  in-progress states still return 409.
+  extraction groups, maps evidence, calculates confidence, and advances to
+  `READY`. Individual extractions can be `PENDING_REVIEW` while the paper is
+READY. Partial extraction/evidence failure reasons are retained for the API
+and review routing; other in-progress states still return 409.
 
 ### GET /papers/{paper_id}/status
 - 200 -> `{ "status": str, "failure_reason": str|null }`
@@ -50,17 +49,24 @@ text-extracted paper. Same idempotency rule as `/process`.
 ## Extractions
 
 ### GET /papers/{paper_id}/extractions
-Phase 5 returns normalized non-null extraction items with their original
-AI-proposed source/page/section and independently matched evidence summary.
-Confidence fields remain null until the confidence phase.
+Returns normalized non-null extraction items with their original AI-proposed
+source/page/section, independently matched evidence summary, and after scoring:
+`confidence_score`, `confidence_level`, `confidence_signals` (object with
+`schema_validity`, `evidence_strength`, `source_relevance`, `completeness`),
+`review_required`, `review_reasons`, and item `status`. `PENDING_REVIEW` is
+independent of score level; see `CONFIDENCE_SYSTEM.md` for reasons and meaning.
 
 ### GET /extractions/{extraction_id}
-Single extraction item, full detail.
+Single extraction item, full detail including confidence and routing output.
 
 ### GET /extractions/{extraction_id}/evidence
 Evidence record for that extraction, including both proposed and matched
 source/page/section, `evidence_score`, `page_corrected`, `match_status`, and
 failure code. Matched means traceability, not factual correctness.
+
+Confidence is included in the extraction response rather than duplicated in a
+dedicated endpoint. Missing/unavailable/weak/failed evidence can set
+`review_required=true` even when `confidence_level` is MEDIUM or HIGH.
 
 ### POST /extractions/{extraction_id}/review
 Body: `{ "action": "ACCEPT"|"EDIT"|"REJECT", "reviewed_value": str|null,
@@ -94,6 +100,9 @@ value(s) and confidence.
 
 - 2026-09-27: Documented the section-detection checkpoint; page text remains
   separately committed at `TEXT_EXTRACTED` before detection starts.
+- 2026-09-28: Phase 6 extends extraction responses with persisted confidence
+  signals and review routing. `POST /process` now reaches `READY` after
+  successful scoring; review-required items remain pending at item level.
 
 ## Idempotency & retries
 
