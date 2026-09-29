@@ -1,79 +1,109 @@
-# Testing Strategy
+# Testing and Evaluation Strategy
 
-Phase 8 tests the frontend HTTP client's successful response parsing, safe
-error conversion and review request payload, plus edit validation and
-extraction grouping helpers. Phase 9 adds deterministic comparison tests for
-normalization, READY/selection validation, frequencies and source traceability,
-pairwise differences, missing fields, patterns, and unavailable limitations.
-API tests cover the comparison schema and error envelope; frontend tests cover
-request construction, response validation, and traceable render transformations.
+Software tests and empirical evaluation answer different questions. Tests
+check whether the implementation follows its contract on controlled inputs.
+Evaluation compares model predictions with independent annotations on a
+defined dataset. Passing tests is not an extraction accuracy result.
+
+## Test layers
+
+| Layer | Scope | Current approach |
+|---|---|---|
+| Unit tests | Schemas, section detection, evidence matching, confidence formula/routing, normalization, insight grounding | `tests/test_*.py`, deterministic inputs |
+| Integration tests | PDF processing, persistence, evidence/confidence writes, atomic review, retry/failure handling | Temporary SQLite databases and mocked providers |
+| API tests | Upload, processing, extraction, evidence, review, comparison, insight request/response and error envelopes | FastAPI `TestClient` |
+| End-to-end tests | Upload PDF through processing, comparison and insights | Local PDF fixtures, mock provider; no paid service |
+| Evaluation benchmarks | Extraction and evidence predictions against independent reference annotations; deterministic analytics against controlled expected results | `data/evaluation/` and `scripts/evaluate.py` |
+| Failure injection | Corrupt/empty/duplicate/invalid/oversized PDFs, provider errors/timeouts/malformed output, invalid evidence, DB writes, invalid transitions and references | Explicit regression tests |
+| Manual UI smoke tests | Streamlit navigation, rendering, evidence visibility, review controls and comparison display | Follow `docs/DEMO_GUIDE.md`; browser rendering is not automated |
+
+Phase 8 covers frontend response/error parsing and review payloads. Phase 9
+covers comparison normalization, selection, frequency traceability, pairwise
+differences, patterns, and missing information. Phase 10 covers
+limitations/future-work claims and deterministic gap rules. Phase 11 covers
+bounded insight input, escaped untrusted data, mock-provider responses,
+grounding, duplicate/size controls, invalid references, and API errors.
 Streamlit browser rendering is not asserted.
 
-Phase 10 tests the explicit limitations/future-work prompt constraints and
-strict Claim schemas, the shared extraction/evidence/confidence persistence
-path, existing review actions for these groups, deterministic recurrence,
-concentration/sparsity/coverage candidates, configurable thresholds, traceable
-candidate records, API compatibility, and frontend candidate transformations.
-Analytics fixtures are synthetic and make no external or LLM gap-generation
-calls.
+## Phase 12 dataset and matching
 
-## Unit tests (`tests/unit/`)
+`data/evaluation/papers.json` contains ten short, locally authored synthetic
+papers with page boundaries and varied headings, methods, datasets, metrics,
+limitations, future work, missing fields, and a prompt-injection string.
+`data/evaluation/annotations.json` contains human-authored expected values and
+verbatim page evidence, authored independently from model output. These are
+compact evaluation fixtures, not external publications.
 
-Phase 11 tests cover allowlisted insight-input construction, bounded values and
-confidence/review context, untrusted-data prompt separation, valid and malformed
-mock-provider output, output-size and duplicate controls, observation and
-interpretation requirements, type/scope/reference/numeric grounding, suggested
-research-question labeling, API selection/provider behavior, independent
-deterministic comparison, and frontend response/display transformations. The
-mock provider returns an empty valid insight list without network access.
+Prediction files passed with `--predictions` use a `papers` object keyed by
+fixture ID, then extraction field, then arrays of `{"value": ..., "evidence":
+{"page": 1, "quote": ...}}`. Expected values use the extraction schema's
+field names and one record per list claim; scalar claims use the same one-item
+list representation for scoring. A missing prediction is missing output. An
+empty reference list means the field was annotated and no claim was expected;
+any prediction for it is counted as an incorrect extra. A missing annotation
+field is NOT_APPLICABLE, and a null reference is UNAVAILABLE; both are excluded
+from extraction denominators.
 
-| Subsystem | Cases | Acceptance criteria |
-|---|---|---|
-| PDF parsing | valid PDF, corrupted PDF, empty-text PDF | Correct page count/text for valid; correct FAILED reason for the other two |
-| Section detection | standard/variant headings, numbering, capitalization, missing sections, multi-page spans, references, malformed whitespace, body prose, no headings | Correct page-aware content boundaries; graceful whole-document fallback when nothing is detected |
-| Schema validation | valid payload, missing required field, wrong type, null-for-insufficient-evidence | Valid passes; each invalid case rejected with a specific, testable error |
-| Evidence matching | exact, normalized whitespace, punctuation, partial, missing source, no match, invalid/missing page, multiple candidates, section/page consistency | Similarity scores fall in expected bands; invalid/missing page triggers fallback; proposed page/section are not trusted as matched location |
-| Confidence calculation | all-strong/all-weak/mixed signals; boundary values immediately around 0.45 and 0.75; MATCHED/WEAK/UNAVAILABLE/FAILED/missing evidence; invalid values | Exact formula and level; zero/missing/weak/failed evidence routing independently requires review; no invalid value produces a score |
-| Database repository | insert/read/update/delete for every table, cascade delete | Cascades verified by asserting child rows are gone after parent delete |
-| Analytics | frequency counts against a fixture set of extractions | Counts match hand-computed expected values |
-| Phase 9 comparison | normalization, selection, frequencies, pairwise differences, missing fields, patterns, and traceability | Deterministic results retain original values, confidence/review metadata, and source paper/extraction IDs |
-| Phase 10 gap analytics | limitation/future-work groups, recurring values, concentration, sparse dimensions, method/dataset co-occurrence, thresholds, and candidate traceability | Claims use existing validation/evidence/confidence/review flow; candidates remain selected-literature-scoped and machine-traceable |
+Item matching is one-to-one with global priority passes: exact string equality
+for all expected items first, then NFKC/casefold/punctuation/whitespace
+equality, then partial match for Jaccard token overlap of at least 0.5. Only exact and normalized matches count as true
+positives for precision, recall and F1. Partial, missing, and extra incorrect
+items remain separately visible. Field coverage is the fraction of annotated,
+available paper-field pairs with a prediction key, including an empty list.
+Evidence is correct only when the normalized
+quoted passage occurs on the claimed one-based page. A quote on another page is
+incorrect; weak token overlap on the claimed page is WEAK; no quote/page is
+UNAVAILABLE. Evidence precision uses correct/predicted evidence items, and
+recall uses correct/annotated evidence items. Lexical matching does not prove
+that a passage entails a claim.
 
-## Integration tests (`tests/integration/`)
+Without a separately produced model prediction file, extraction and evidence
+performance are reported as **Not measured**. The null mock provider is not
+scored as an extraction model. Confidence scores are deterministic routing
+scores, not calibrated probabilities. Comparison and gap-rule correctness are
+tested against hand-authored synthetic database fixtures, not generalized to
+research literature.
 
-- PDF -> parser -> section detection -> database: assert page text and
-  correctly bounded `paper_sections` rows persist together in the pipeline.
-- PDF -> parser -> extraction (AI calls mocked to return fixed structured
-  output) -> database: assert correct rows land in `extractions`.
-- validated extraction -> extraction rows -> stored page lookup -> evidence
-  mapping -> database: assert proposed provenance remains separate from the
-  matched page passage and evidence status/score are deterministic.
-- Validated extraction -> evidence mapping -> confidence scoring -> SQLite ->
-  extraction API: assert deterministic score/signals/review routing persist and
-  paper reaches `READY` without live model calls.
-- Pending extraction -> Accept/Edit/Reject review API -> SQLite -> extraction
-  GET: assert terminal item state, one review record, immutable AI value,
-  reviewed value/comment/timestamp, and unchanged paper status. Include
-  invalid input, duplicate review, and transaction rollback cases.
-- Failure-path integration: corrupted PDF end-to-end results in
-  `status=FAILED` with the correct `failure_reason`.
+## Reproduce
 
-## End-to-end tests (`tests/e2e/`)
+From the repository root:
 
-Upload a real (small, sample) paper -> process -> poll status to READY ->
-fetch extractions -> fetch evidence for one item -> submit a review action
--> fetch analytics -> run a 2-paper comparison. Assert each step returns
-expected shapes per `API_SPECIFICATION.md`. AI calls should be mockable via
-an env flag (`AI_PROVIDER=mock`) so e2e tests don't require a live API key
-or incur cost in CI/local test runs.
+```bash
+.venv/bin/python scripts/evaluate.py
+PYTHONPATH=. .venv/bin/python -m pytest -q
+.venv/bin/python -m compileall -q app frontend tests scripts
+git diff --check
+```
 
-## Acceptance criteria for "a feature is complete"
+The runner writes `data/evaluation/evaluation_results.json` and prints the
+same structured result. Optional independently generated predictions can be
+scored with `.venv/bin/python scripts/evaluate.py --predictions
+path/to/predictions.json --output path/to/results.json`. Do not use application
+output as its own reference or silently convert absent predictions into
+successful matches.
 
-A feature is complete only when: (1) it has at least one unit test and, if
-it touches more than one component, at least one integration test; (2) it
-is reachable through the actual API/UI, not just tested in isolation; (3)
-failure paths relevant to it are covered per `ERROR_HANDLING.md`; (4) it is
-reflected accurately in this documentation set (no doc/code drift).
+## Existing subsystem regression coverage
 
-Never report a feature as "working" without a passing test demonstrating
-it — see `AGENT_INSTRUCTIONS.md`.
+- PDF -> parser -> section detection -> database: page text and bounded section
+  rows persist.
+- PDF -> parser -> extraction with a fixed provider -> database: validated
+  groups persist; invalid groups do not become successful payloads.
+- Validated extraction -> stored page lookup -> evidence mapping -> database:
+  proposed and matched provenance remain separate.
+- Evidence -> confidence -> SQLite -> extraction API: deterministic score,
+  signals and review routing persist.
+- Pending extraction -> Accept/Edit/Reject -> SQLite -> GET: terminal state,
+  one review record, immutable AI value, reviewed value/comment/timestamp, and
+  unchanged paper status. Invalid input, duplicate review and rollback are
+  covered.
+- Failure paths cover PDF failures, provider retries and errors, evidence and
+  database failures, invalid selections, and insight validation.
+- Offline PDF upload -> processing -> READY -> comparison -> mock insights is
+  exercised without a live provider.
+
+## Acceptance criteria for a feature
+
+A feature is complete only when it has tests at the applicable layers,
+relevant failure paths are covered, and documentation accurately describes
+the behavior. Do not describe an empirical model metric unless it was
+calculated from predictions against these independent references.

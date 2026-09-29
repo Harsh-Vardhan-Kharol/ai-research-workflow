@@ -134,6 +134,8 @@ def test_paper_derived_prompt_injection_stays_inside_escaped_data(tmp_path):
     {"scope": "The field in general."},
     {"observation": "Dataset X appears in 17 studies."},
     {"supporting_candidate_ids": ["candidate:99"]},
+    {"supporting_pattern_ids": ["pattern:99"]},
+    {"observation": 42},
     {"type": "GAP_CANDIDATE_INTERPRETATION",
      "supporting_candidate_ids": ["candidate:0"],
      "interpretation": "This is a confirmed research gap across the selected records."},

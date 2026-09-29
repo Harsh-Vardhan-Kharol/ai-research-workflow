@@ -84,3 +84,7 @@ built once the structured records it consumes exist.
 - 2026-09-29: Phase 11 adds optional AI interpretation of the deterministic
   comparison response, a compact traceable input package, validated structured
   insights, and explicit failure states without changing comparison behavior.
+- 2026-09-29: Phase 12 adds independent synthetic annotations, offline
+  prediction scoring, controlled reliability regressions, and a structured
+  report. Extraction and evidence metrics remain Not measured without an
+  explicit prediction file; no runtime architecture change is made.

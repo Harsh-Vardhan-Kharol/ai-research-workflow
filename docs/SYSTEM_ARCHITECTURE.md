@@ -1,5 +1,13 @@
 # System Architecture
 
+## Phase 12 evaluation note
+
+Evaluation is an offline development tool, not a runtime subsystem. Synthetic
+paper text and independent annotations live under `data/evaluation/`;
+`scripts/evaluate.py` scores optional prediction files and does not call the
+paid provider. Missing model predictions yield “Not measured.” Existing
+application boundaries and Phase 1–11 workflow semantics are unchanged.
+
 ## Phase 11 insight path
 
 The insight route runs the existing deterministic comparison for the selected

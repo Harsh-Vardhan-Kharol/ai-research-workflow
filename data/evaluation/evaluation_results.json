@@ -1,0 +1,87 @@
+{
+  "dataset": {
+    "id": "researchflow-synthetic-eval-v1",
+    "paper_count": 10,
+    "page_count": 20,
+    "source": "synthetic, locally authored fixtures",
+    "annotation_version": 1,
+    "annotated_field_count": 140
+  },
+  "evaluation_timestamp_utc": "2026-09-28T20:55:09.002501+00:00",
+  "components": {
+    "extraction": {
+      "status": "Not measured",
+      "reason": "No model predictions supplied; mock-provider output is not treated as extraction performance."
+    },
+    "evidence": {
+      "status": "Not measured",
+      "reason": "No predicted evidence locations supplied."
+    },
+    "confidence_routing": {
+      "status": "measured",
+      "controlled_cases_passed": 6,
+      "controlled_cases": 6,
+      "metric": "Deterministic expected route cases passed; not a probability calibration metric."
+    },
+    "review_workflow": {
+      "status": "covered by deterministic integration tests"
+    },
+    "comparison": {
+      "status": "measured",
+      "frequency_expectations_passed": 6,
+      "frequency_expectations": 6,
+      "source_traceability": "passed",
+      "fixture_papers": 3
+    },
+    "gap_candidates": {
+      "status": "measured",
+      "supported_rules_found": 6,
+      "supported_rules_expected": 6,
+      "rules": [
+        "DATASET_CONCENTRATION",
+        "METHOD_CONCENTRATION",
+        "METHOD_DATASET_ABSENCE",
+        "RECURRING_FUTURE_WORK",
+        "RECURRING_LIMITATION",
+        "SPARSE_DIMENSION"
+      ],
+      "selected_papers": 8,
+      "dataset_concentration_threshold": {
+        "6_of_8": "triggered",
+        "5_of_8": "not_triggered"
+      }
+    },
+    "insight_grounding": {
+      "status": "covered by deterministic mock-provider tests"
+    }
+  },
+  "controlled_check_counts": {
+    "confidence_routing": {
+      "passed": 6,
+      "total": 6
+    },
+    "comparison_frequencies": {
+      "passed": 6,
+      "total": 6
+    },
+    "gap_rules": {
+      "passed": 6,
+      "total": 6
+    },
+    "gap_threshold_boundaries": {
+      "passed": 2,
+      "total": 2
+    }
+  },
+  "regression_test_suite": {
+    "status": "not run by evaluation runner",
+    "command": "PYTHONPATH=. .venv/bin/python -m pytest -q"
+  },
+  "limitations": [
+    "Synthetic dataset of ten compact papers.",
+    "No live or local extraction model benchmark is run by default.",
+    "Manual reference annotations can be subjective.",
+    "Normalization is lexical and does not capture semantic equivalence.",
+    "No significance testing or confidence calibration is attempted."
+  ]
+}

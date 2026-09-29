@@ -1,0 +1,700 @@
+{
+  "annotation_version": 1,
+  "annotation_policy": "Human-authored reference values and verbatim evidence passages, created directly from the synthetic paper text before any model output. Null means unavailable/not stated; empty list means no annotated item for that repeatable field.",
+  "papers": {
+    "evaluation_paper_01": {
+      "research_problem": [
+        {
+          "value": "crop-yield estimation under sparse weather observations",
+          "page": 1,
+          "evidence_quote": "We study crop-yield estimation under sparse weather observations"
+        }
+      ],
+      "research_objective": [],
+      "methodology": [
+        {
+          "value": "Random Forest",
+          "page": 2,
+          "evidence_quote": "Random Forest was trained with a 70/30 split"
+        }
+      ],
+      "models_algorithms": [
+        {
+          "value": "Random Forest",
+          "page": 2,
+          "evidence_quote": "Random Forest was trained with a 70/30 split"
+        }
+      ],
+      "datasets": [
+        {
+          "value": "Dataset X",
+          "page": 1,
+          "evidence_quote": "on Dataset X"
+        }
+      ],
+      "evaluation_metrics": [
+        {
+          "value": "accuracy",
+          "page": 1,
+          "evidence_quote": "using accuracy"
+        }
+      ],
+      "limitations": [
+        {
+          "value": "small sample size limits generalization",
+          "page": 1,
+          "evidence_quote": "The small sample size limits generalization"
+        }
+      ],
+      "future_work": [
+        {
+          "value": "evaluate on larger datasets",
+          "page": 1,
+          "evidence_quote": "Future work will evaluate on larger datasets"
+        }
+      ],
+      "title": [
+        {
+          "value": "Forest Models for Crop Yield",
+          "page": 1,
+          "evidence_quote": "Title: Forest Models for Crop Yield"
+        }
+      ],
+      "authors": [],
+      "publication_year": [],
+      "abstract": [
+        {
+          "value": "We study crop-yield estimation under sparse weather observations. We evaluate Random Forest on Dataset X using accuracy. The small sample size limits generalization. Future work will evaluate on larger datasets.",
+          "page": 1,
+          "evidence_quote": "We study crop-yield estimation under sparse weather observations. We evaluate Random Forest on Dataset X using accuracy. The small sample size limits generalization. Future work will evaluate on larger datasets."
+        }
+      ],
+      "experimental_setup": [
+        {
+          "value": "70/30 split",
+          "page": 2,
+          "evidence_quote": "Random Forest was trained with a 70/30 split"
+        }
+      ],
+      "key_results": [
+        {
+          "value": "accuracy of 0.82",
+          "page": 2,
+          "evidence_quote": "Results showed accuracy of 0.82"
+        }
+      ]
+    },
+    "evaluation_paper_02": {
+      "research_problem": [
+        {
+          "value": "slow clinical note classification",
+          "page": 1,
+          "evidence_quote": "This study addresses slow clinical note classification"
+        }
+      ],
+      "research_objective": [
+        {
+          "value": "compare Transformer and Logistic Regression",
+          "page": 1,
+          "evidence_quote": "The objective is to compare Transformer and Logistic Regression"
+        }
+      ],
+      "methodology": [
+        {
+          "value": "Transformer",
+          "page": 2,
+          "evidence_quote": "We fine-tuned a Transformer"
+        }
+      ],
+      "models_algorithms": [
+        {
+          "value": "Transformer",
+          "page": 2,
+          "evidence_quote": "We fine-tuned a Transformer"
+        },
+        {
+          "value": "Logistic Regression",
+          "page": 1,
+          "evidence_quote": "compare Transformer and Logistic Regression"
+        }
+      ],
+      "datasets": [
+        {
+          "value": "Dataset Y",
+          "page": 1,
+          "evidence_quote": "on Dataset Y"
+        }
+      ],
+      "evaluation_metrics": [
+        {
+          "value": "Macro F1",
+          "page": 1,
+          "evidence_quote": "Macro F1 is the primary metric"
+        }
+      ],
+      "limitations": [
+        {
+          "value": "one hospital supplied the records",
+          "page": 2,
+          "evidence_quote": "one hospital supplied the records"
+        }
+      ],
+      "future_work": [
+        {
+          "value": "evaluate additional hospitals",
+          "page": 2,
+          "evidence_quote": "Future work should evaluate additional hospitals"
+        }
+      ],
+      "title": [
+        {
+          "value": "A Transformer for Clinical Notes",
+          "page": 1,
+          "evidence_quote": "A Transformer for Clinical Notes"
+        }
+      ],
+      "authors": [],
+      "publication_year": [],
+      "abstract": [
+        {
+          "value": "This study addresses slow clinical note classification. The objective is to compare Transformer and Logistic Regression on Dataset Y. Macro F1 is the primary metric.",
+          "page": 1,
+          "evidence_quote": "This study addresses slow clinical note classification. The objective is to compare Transformer and Logistic Regression on Dataset Y. Macro F1 is the primary metric."
+        }
+      ],
+      "experimental_setup": [],
+      "key_results": []
+    },
+    "evaluation_paper_03": {
+      "research_problem": [
+        {
+          "value": "Few labels make graph classification difficult",
+          "page": 1,
+          "evidence_quote": "Few labels make graph classification difficult"
+        }
+      ],
+      "research_objective": [
+        {
+          "value": "measure GraphSAGE on Dataset X",
+          "page": 1,
+          "evidence_quote": "We aim to measure GraphSAGE on Dataset X"
+        }
+      ],
+      "methodology": [
+        {
+          "value": "GraphSAGE",
+          "page": 2,
+          "evidence_quote": "GraphSAGE uses neighborhood aggregation"
+        }
+      ],
+      "models_algorithms": [
+        {
+          "value": "GraphSAGE",
+          "page": 2,
+          "evidence_quote": "GraphSAGE uses neighborhood aggregation"
+        }
+      ],
+      "datasets": [
+        {
+          "value": "Dataset X",
+          "page": 1,
+          "evidence_quote": "measure GraphSAGE on Dataset X"
+        },
+        {
+          "value": "Dataset Z",
+          "page": 2,
+          "evidence_quote": "We report AUROC on Dataset Z"
+        }
+      ],
+      "evaluation_metrics": [
+        {
+          "value": "AUROC",
+          "page": 2,
+          "evidence_quote": "We report AUROC"
+        }
+      ],
+      "limitations": [],
+      "future_work": [],
+      "title": [
+        {
+          "value": "Graph Learning with Limited Labels",
+          "page": 1,
+          "evidence_quote": "Graph Learning with Limited Labels"
+        }
+      ],
+      "authors": [],
+      "publication_year": [],
+      "abstract": [],
+      "experimental_setup": [],
+      "key_results": []
+    },
+    "evaluation_paper_04": {
+      "research_problem": [
+        {
+          "value": "ranking stability",
+          "page": 1,
+          "evidence_quote": "We investigate ranking stability"
+        }
+      ],
+      "research_objective": [
+        {
+          "value": "reproduce prior findings with BM25",
+          "page": 1,
+          "evidence_quote": "seek to reproduce prior findings with BM25"
+        }
+      ],
+      "methodology": [
+        {
+          "value": "BM25",
+          "page": 1,
+          "evidence_quote": "with BM25"
+        }
+      ],
+      "models_algorithms": [
+        {
+          "value": "BM25",
+          "page": 1,
+          "evidence_quote": "with BM25"
+        }
+      ],
+      "datasets": [
+        {
+          "value": "Dataset Y",
+          "page": 1,
+          "evidence_quote": "Dataset Y is used"
+        }
+      ],
+      "evaluation_metrics": [
+        {
+          "value": "nDCG",
+          "page": 1,
+          "evidence_quote": "the metric is nDCG"
+        }
+      ],
+      "limitations": [],
+      "future_work": [],
+      "title": [
+        {
+          "value": "A Reproducibility Study of Ranking",
+          "page": 1,
+          "evidence_quote": "A Reproducibility Study of Ranking"
+        }
+      ],
+      "authors": [],
+      "publication_year": [],
+      "abstract": [
+        {
+          "value": "We investigate ranking stability and seek to reproduce prior findings with BM25. Dataset Y is used and the metric is nDCG.",
+          "page": 1,
+          "evidence_quote": "We investigate ranking stability and seek to reproduce prior findings with BM25. Dataset Y is used and the metric is nDCG."
+        }
+      ],
+      "experimental_setup": [
+        {
+          "value": "corpus was split by publication year",
+          "page": 2,
+          "evidence_quote": "The corpus was split by publication year"
+        }
+      ],
+      "key_results": [
+        {
+          "value": "not statistically significant",
+          "page": 2,
+          "evidence_quote": "Results were not statistically significant"
+        }
+      ]
+    },
+    "evaluation_paper_05": {
+      "research_problem": [
+        {
+          "value": "Wearable sensor labels are noisy",
+          "page": 1,
+          "evidence_quote": "Wearable sensor labels are noisy"
+        }
+      ],
+      "research_objective": [
+        {
+          "value": "robust event recognition",
+          "page": 1,
+          "evidence_quote": "The objective is robust event recognition"
+        }
+      ],
+      "methodology": [
+        {
+          "value": "XGBoost",
+          "page": 1,
+          "evidence_quote": "using XGBoost"
+        }
+      ],
+      "models_algorithms": [
+        {
+          "value": "XGBoost",
+          "page": 1,
+          "evidence_quote": "using XGBoost"
+        }
+      ],
+      "datasets": [
+        {
+          "value": "Dataset W",
+          "page": 1,
+          "evidence_quote": "on Dataset W"
+        }
+      ],
+      "evaluation_metrics": [
+        {
+          "value": "Macro-F1",
+          "page": 2,
+          "evidence_quote": "Macro-F1 was measured"
+        }
+      ],
+      "limitations": [
+        {
+          "value": "limited battery life restricted collection duration",
+          "page": 2,
+          "evidence_quote": "The limited battery life restricted collection duration"
+        }
+      ],
+      "future_work": [
+        {
+          "value": "collect longer sensor streams",
+          "page": 2,
+          "evidence_quote": "Future work: collect longer sensor streams"
+        }
+      ],
+      "title": [
+        {
+          "value": "Learning from Sensor Streams",
+          "page": 1,
+          "evidence_quote": "Learning from Sensor Streams"
+        }
+      ],
+      "authors": [],
+      "publication_year": [],
+      "abstract": [],
+      "experimental_setup": [],
+      "key_results": []
+    },
+    "evaluation_paper_06": {
+      "research_problem": [],
+      "research_objective": [],
+      "methodology": [
+        {
+          "value": "compare Naive Bayes and linear SVM",
+          "page": 1,
+          "evidence_quote": "We compare Naive Bayes and linear SVM"
+        }
+      ],
+      "models_algorithms": [
+        {
+          "value": "Naive Bayes",
+          "page": 1,
+          "evidence_quote": "We compare Naive Bayes"
+        },
+        {
+          "value": "linear SVM",
+          "page": 1,
+          "evidence_quote": "and linear SVM"
+        }
+      ],
+      "datasets": [
+        {
+          "value": "Dataset X",
+          "page": 1,
+          "evidence_quote": "Dataset X"
+        }
+      ],
+      "evaluation_metrics": [
+        {
+          "value": "Accuracy",
+          "page": 1,
+          "evidence_quote": "Accuracy and F1 are reported"
+        },
+        {
+          "value": "F1",
+          "page": 1,
+          "evidence_quote": "Accuracy and F1 are reported"
+        }
+      ],
+      "limitations": [
+        {
+          "value": "sample is small",
+          "page": 2,
+          "evidence_quote": "The sample is small"
+        }
+      ],
+      "future_work": [
+        {
+          "value": "evaluation on larger datasets",
+          "page": 2,
+          "evidence_quote": "We propose evaluation on larger datasets"
+        }
+      ],
+      "title": [
+        {
+          "value": "Small Data, Simple Baselines",
+          "page": 1,
+          "evidence_quote": "Small Data, Simple Baselines"
+        }
+      ],
+      "authors": [],
+      "publication_year": [],
+      "abstract": [],
+      "experimental_setup": [],
+      "key_results": []
+    },
+    "evaluation_paper_07": {
+      "research_problem": [
+        {
+          "value": "duplicate bug reports",
+          "page": 1,
+          "evidence_quote": "This work addresses duplicate bug reports"
+        }
+      ],
+      "research_objective": [],
+      "methodology": [
+        {
+          "value": "Siamese Networks",
+          "page": 1,
+          "evidence_quote": "We use Siamese Networks"
+        }
+      ],
+      "models_algorithms": [
+        {
+          "value": "Siamese Networks",
+          "page": 1,
+          "evidence_quote": "We use Siamese Networks"
+        }
+      ],
+      "datasets": [
+        {
+          "value": "Dataset V",
+          "page": 1,
+          "evidence_quote": "with Dataset V"
+        }
+      ],
+      "evaluation_metrics": [
+        {
+          "value": "Recall@10",
+          "page": 1,
+          "evidence_quote": "Recall@10 is reported"
+        }
+      ],
+      "limitations": [],
+      "future_work": [
+        {
+          "value": "test multilingual data",
+          "page": 2,
+          "evidence_quote": "Future work will test multilingual data"
+        }
+      ],
+      "title": [
+        {
+          "value": "An Unusual Paper Structure",
+          "page": 1,
+          "evidence_quote": "An Unusual Paper Structure"
+        }
+      ],
+      "authors": [],
+      "publication_year": [],
+      "abstract": [],
+      "experimental_setup": [],
+      "key_results": []
+    },
+    "evaluation_paper_08": {
+      "research_problem": [
+        {
+          "value": "robustness of paper classification",
+          "page": 1,
+          "evidence_quote": "We study robustness of paper classification"
+        }
+      ],
+      "research_objective": [],
+      "methodology": [
+        {
+          "value": "CNN",
+          "page": 1,
+          "evidence_quote": "with CNN"
+        }
+      ],
+      "models_algorithms": [
+        {
+          "value": "CNN",
+          "page": 1,
+          "evidence_quote": "with CNN"
+        }
+      ],
+      "datasets": [
+        {
+          "value": "Dataset U",
+          "page": 1,
+          "evidence_quote": "on Dataset U"
+        }
+      ],
+      "evaluation_metrics": [
+        {
+          "value": "accuracy",
+          "page": 1,
+          "evidence_quote": "and accuracy"
+        }
+      ],
+      "limitations": [
+        {
+          "value": "benchmark contains only three topics",
+          "page": 2,
+          "evidence_quote": "The benchmark contains only three topics"
+        }
+      ],
+      "future_work": [
+        {
+          "value": "evaluate more topics",
+          "page": 2,
+          "evidence_quote": "Evaluate more topics"
+        }
+      ],
+      "title": [
+        {
+          "value": "Instruction Following in Scientific Text",
+          "page": 1,
+          "evidence_quote": "Instruction Following in Scientific Text"
+        }
+      ],
+      "authors": [],
+      "publication_year": [],
+      "abstract": [
+        {
+          "value": "We study robustness of paper classification with CNN on Dataset U and accuracy.",
+          "page": 1,
+          "evidence_quote": "We study robustness of paper classification with CNN on Dataset U and accuracy."
+        }
+      ],
+      "experimental_setup": [],
+      "key_results": []
+    },
+    "evaluation_paper_09": {
+      "research_problem": [
+        {
+          "value": "class imbalance in public health data",
+          "page": 1,
+          "evidence_quote": "We investigate class imbalance in public health data"
+        }
+      ],
+      "research_objective": [],
+      "methodology": [
+        {
+          "value": "stratified sampling",
+          "page": 1,
+          "evidence_quote": "We apply stratified sampling"
+        }
+      ],
+      "models_algorithms": [],
+      "datasets": [],
+      "evaluation_metrics": [],
+      "limitations": [],
+      "future_work": [],
+      "title": [
+        {
+          "value": "A Study with Missing Fields",
+          "page": 1,
+          "evidence_quote": "A Study with Missing Fields"
+        }
+      ],
+      "authors": [],
+      "publication_year": [],
+      "abstract": [],
+      "experimental_setup": [],
+      "key_results": [
+        {
+          "value": "improved minority-class recall",
+          "page": 2,
+          "evidence_quote": "The method improved minority-class recall"
+        }
+      ]
+    },
+    "evaluation_paper_10": {
+      "research_problem": [
+        {
+          "value": "Evaluations on one benchmark can miss distribution shift",
+          "page": 1,
+          "evidence_quote": "Evaluations on one benchmark can miss distribution shift"
+        }
+      ],
+      "research_objective": [],
+      "methodology": [
+        {
+          "value": "Decision Tree and Random Forest",
+          "page": 1,
+          "evidence_quote": "We compare Decision Tree and Random Forest"
+        }
+      ],
+      "models_algorithms": [
+        {
+          "value": "Decision Tree",
+          "page": 1,
+          "evidence_quote": "compare Decision Tree"
+        },
+        {
+          "value": "Random Forest",
+          "page": 1,
+          "evidence_quote": "and Random Forest"
+        }
+      ],
+      "datasets": [
+        {
+          "value": "Dataset T",
+          "page": 1,
+          "evidence_quote": "on Dataset T"
+        }
+      ],
+      "evaluation_metrics": [
+        {
+          "value": "balanced accuracy",
+          "page": 1,
+          "evidence_quote": "using balanced accuracy"
+        }
+      ],
+      "limitations": [
+        {
+          "value": "small sample size",
+          "page": 2,
+          "evidence_quote": "Small sample size"
+        }
+      ],
+      "future_work": [
+        {
+          "value": "evaluate on larger datasets",
+          "page": 2,
+          "evidence_quote": "Future work will evaluate on larger datasets"
+        },
+        {
+          "value": "evaluate additional domains",
+          "page": 2,
+          "evidence_quote": "and additional domains"
+        }
+      ],
+      "title": [
+        {
+          "value": "A Short Methods Note",
+          "page": 1,
+          "evidence_quote": "A Short Methods Note"
+        }
+      ],
+      "authors": [
+        {
+          "value": "Example Research Group",
+          "page": 1,
+          "evidence_quote": "Authors: Example Research Group"
+        }
+      ],
+      "publication_year": [
+        {
+          "value": "2024",
+          "page": 1,
+          "evidence_quote": "2024"
+        }
+      ],
+      "abstract": [],
+      "experimental_setup": [],
+      "key_results": []
+    }
+  }
+}

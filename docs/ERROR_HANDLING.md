@@ -1,5 +1,15 @@
 # Error Handling
 
+## Phase 12 reliability verification
+
+Automated checks inject corrupt, empty, duplicate, invalid-MIME, and oversized
+PDF inputs; provider unavailability, timeout, and malformed output; invalid
+evidence and review transitions; database write failures where practical;
+invalid comparison selections; and unknown insight references. Expected
+behavior is an explicit safe error or persisted failure state, with no
+successful fabricated extraction or insight payload. Retry checks exercise
+only retry paths that already exist; evaluation does not add retry semantics.
+
 ## Failure-mode matrix
 
 | Failure | Detection | Handling | User message | Log event |

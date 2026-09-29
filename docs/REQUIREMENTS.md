@@ -95,6 +95,19 @@
   and never requires raw PDFs. Provider failure leaves deterministic
   comparison available. AI insights are not authoritative conclusions.
 
+## Phase 12 scope
+
+- Reproducible local software checks and empirical evaluation are reported
+  separately. Ten compact synthetic papers have independent reference
+  annotations and page evidence in `data/evaluation/`.
+- Extraction and evidence metrics are reported only when predictions are
+  explicitly supplied to `scripts/evaluate.py`; absent predictions are
+  reported as Not measured. Mock-provider output is not an extraction score.
+- Confidence routing, review transitions, comparison, gap rules, insight
+  grounding, failure handling, and an offline end-to-end path use controlled
+  fixtures. Confidence is not described as calibrated probability.
+- Phase 12 adds no processing architecture or persistence model changes.
+
 ## Explicit non-goals (do not build, even if "easy")
 
 Autonomous agent frameworks, multi-agent orchestration, GraphRAG, vector DB,
