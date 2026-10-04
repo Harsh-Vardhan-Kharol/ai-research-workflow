@@ -28,6 +28,52 @@ def api() -> ResearchFlowApi:
     return ResearchFlowApi()
 
 
+def apply_minimal_theme() -> None:
+    """Small visual system for a quieter, more focused workspace."""
+    st.markdown(
+        """
+        <style>
+        :root { --rf-accent: #ff6b6b; --rf-accent-soft: rgba(255,107,107,.12); }
+        [data-testid="stAppViewContainer"] { background: #0f1117; }
+        [data-testid="stSidebar"] { background: #151821; border-right: 1px solid #252936; }
+        [data-testid="stSidebar"] > div:first-child { padding: 1.4rem 1rem; }
+        [data-testid="stMainBlockContainer"] { max-width: 1180px; padding-top: 2.2rem; padding-bottom: 4rem; }
+        h1 { font-size: 2rem !important; letter-spacing: -0.04em; margin-bottom: .25rem !important; }
+        h2 { font-size: 1.35rem !important; letter-spacing: -0.025em; margin-top: 2rem !important; }
+        h3 { font-size: 1.05rem !important; letter-spacing: -0.015em; }
+        [data-testid="stCaptionContainer"] { color: #9aa1b2; }
+        [data-testid="stButton"] button, [data-testid="stFormSubmitButton"] button {
+            border: 0; border-radius: 8px; min-height: 2.35rem; font-weight: 600;
+            transition: transform .15s ease, opacity .15s ease;
+        }
+        [data-testid="stButton"] button[kind="primary"], [data-testid="stFormSubmitButton"] button[kind="primary"] {
+            background: var(--rf-accent); color: #17191f;
+        }
+        [data-testid="stButton"] button:hover, [data-testid="stFormSubmitButton"] button:hover { transform: translateY(-1px); opacity: .92; }
+        [data-testid="stExpander"] { border: 1px solid #292d3a; border-radius: 10px; background: rgba(255,255,255,.018); margin-bottom: .55rem; }
+        [data-testid="stMetric"] { border: 1px solid #292d3a; border-radius: 10px; padding: .8rem 1rem; background: rgba(255,255,255,.018); }
+        [data-testid="stDataFrame"] { border: 1px solid #292d3a; border-radius: 10px; overflow: hidden; }
+        [data-testid="stFileUploader"] { border: 1px dashed #4a5062; border-radius: 10px; padding: .25rem; background: rgba(255,255,255,.018); }
+        [data-testid="stTextInput"] input, [data-testid="stTextArea"] textarea { border-radius: 8px; }
+        .rf-brand { padding: .35rem .25rem 1.2rem; }
+        .rf-brand-title { font-size: 1.15rem; font-weight: 750; letter-spacing: -.03em; }
+        .rf-brand-mark { color: var(--rf-accent); margin-right: .35rem; }
+        .rf-brand-subtitle { color: #8f96a7; font-size: .78rem; margin-top: .25rem; }
+        .rf-eyebrow { color: var(--rf-accent); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_sidebar_brand() -> None:
+    st.sidebar.markdown(
+        '<div class="rf-brand"><div class="rf-brand-title"><span class="rf-brand-mark">✦</span>ResearchFlow</div>'
+        '<div class="rf-brand-subtitle">Research paper workspace</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def show_error(exc: ApiClientError) -> None:
     if exc.status_code == 404:
         st.warning(str(exc))
@@ -35,14 +81,56 @@ def show_error(exc: ApiClientError) -> None:
         st.error(str(exc))
 
 
+def render_ai_key_placeholder() -> None:
+    """Keep an entered API key masked and only in this Streamlit session."""
+    with st.sidebar.expander("AI configuration", expanded=False):
+        if st.session_state.get("ai_api_key_configured"):
+            st.success("API key saved for this session.")
+            if st.button("Clear API key", key="clear-ai-api-key"):
+                st.session_state.pop("ai_api_key", None)
+                st.session_state.pop("ai_api_key_configured", None)
+                st.rerun()
+            return
+
+        with st.form("ai-api-key-form"):
+            api_key = st.text_input(
+                "Hosted AI API key",
+                type="password",
+                placeholder="Paste your API key here",
+                help="Stored only in this browser session and never displayed after saving.",
+            )
+            submitted = st.form_submit_button("Save API key")
+        if submitted:
+            if api_key.strip():
+                st.session_state["ai_api_key"] = api_key.strip()
+                st.session_state["ai_api_key_configured"] = True
+                st.rerun()
+            st.warning("Enter an API key before saving.")
+
+
 def upload_page(client: ResearchFlowApi) -> None:
-    st.header("Upload a paper")
-    uploaded = st.file_uploader("Choose a research paper PDF", type=["pdf"])
-    if uploaded and st.button("Upload PDF", type="primary"):
+    st.header("Upload research papers")
+    uploaded = st.file_uploader(
+        "Choose one or more research paper PDFs",
+        type=["pdf"],
+        accept_multiple_files=True,
+    )
+    if uploaded:
+        st.caption(f"{len(uploaded)} PDF{'s' if len(uploaded) != 1 else ''} selected")
+    if uploaded and st.button("Upload PDFs", type="primary"):
         try:
-            result = client.upload_paper(uploaded.name, uploaded)
-            st.success(f"Uploaded {result.get('file_name', uploaded.name)} · Paper #{result['id']} · {result['status']}")
-            st.info("Open Papers and start processing when ready.")
+            result = client.upload_papers([(file.name, file) for file in uploaded])
+            for paper in result["uploaded"]:
+                st.success(
+                    f"Uploaded {paper['file_name']} · Paper #{paper['id']} · {paper['status']}"
+                )
+            for rejected in result["rejected"]:
+                detail = rejected.get("message", "Upload rejected.")
+                if rejected.get("existing_paper_id"):
+                    detail += f" Existing paper #{rejected['existing_paper_id']}."
+                st.warning(f"{rejected.get('file_name', 'File')}: {detail}")
+            if result["uploaded"]:
+                st.info("Open Papers and start processing when ready.")
         except ApiClientError as exc:
             show_error(exc)
 
@@ -340,10 +428,16 @@ def comparison_page(client: ResearchFlowApi) -> None:
 
 def main() -> None:
     st.set_page_config(page_title="ResearchFlow AI", page_icon="📄", layout="wide")
-    st.title("ResearchFlow AI")
-    st.caption("Inspect extracted claims, their evidence, and the system's review signals.")
+    apply_minimal_theme()
+    render_sidebar_brand()
+    render_ai_key_placeholder()
     client = api()
-    page = st.sidebar.radio("Workspace", ["Papers", "Review queue", "Compare papers", "Upload"])
+    st.sidebar.markdown('<div class="rf-eyebrow">Workspace</div>', unsafe_allow_html=True)
+    page = st.sidebar.radio(
+        "Workspace",
+        ["Papers", "Review queue", "Compare papers", "Upload"],
+        label_visibility="collapsed",
+    )
     if page == "Upload":
         upload_page(client)
     elif page == "Review queue":

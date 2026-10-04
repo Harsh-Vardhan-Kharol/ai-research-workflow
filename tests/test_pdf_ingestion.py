@@ -215,6 +215,7 @@ def test_upload_process_persists_page_text_and_detects_duplicate(
         # legitimately has no extraction items to score.
         assert scored_items == []
 
+
     connection = connect_database(database_path)
     try:
         initialize_schema(connection)
@@ -232,6 +233,48 @@ def test_upload_process_persists_page_text_and_detects_duplicate(
         assert "Page one" in sections[0]["content"]
     finally:
         connection.close()
+
+
+def test_batch_upload_accepts_valid_files_and_reports_rejected_files(
+    tmp_path, monkeypatch
+) -> None:
+    database_path = tmp_path / "researchflow.db"
+    monkeypatch.setenv("DATABASE_PATH", str(database_path))
+    monkeypatch.setenv("AI_PROVIDER", "mock")
+    monkeypatch.setattr(
+        main_module,
+        "settings",
+        replace(main_module.settings, database_path=database_path),
+    )
+    monkeypatch.setattr(
+        papers_routes,
+        "get_settings",
+        lambda: replace(get_settings(), database_path=database_path),
+    )
+
+    first = make_pdf("First paper has enough extractable research text.")
+    second = make_pdf("Second paper has enough extractable research text.")
+    with TestClient(main_module.app) as client:
+        response = client.post(
+            "/api/v1/papers/upload-batch",
+            files=[
+                ("files", ("first.pdf", first, "application/pdf")),
+                ("files", ("second.pdf", second, "application/pdf")),
+                ("files", ("invalid.txt", b"not a pdf", "text/plain")),
+            ],
+        )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert [item["file_name"] for item in body["uploaded"]] == [
+        "first.pdf", "second.pdf"
+    ]
+    assert body["rejected"] == [{
+        "file_name": "invalid.txt",
+        "code": "INVALID_FILE_TYPE",
+        "message": "Only PDF files are supported.",
+        "existing_paper_id": None,
+    }]
 
 
 def test_corrupt_pdf_processing_sets_failed_status_and_reason(

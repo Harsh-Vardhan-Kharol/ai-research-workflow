@@ -34,6 +34,8 @@ from app.schemas.papers import (
     PaperProcessResponse,
     PaperStatusResponse,
     PaperUploadResponse,
+    PaperBatchUploadResponse,
+    PaperUploadRejectedResponse,
     ReviewRequest,
     ReviewRecordResponse,
     PaperListResponse,
@@ -139,9 +141,9 @@ def _extraction_response(row: sqlite3.Row) -> ExtractionItemResponse:
     )
 
 
-@router.post("/upload", status_code=201, response_model=PaperUploadResponse)
-async def upload_paper(file: UploadFile = File(...)) -> PaperUploadResponse:
-    settings = get_settings()
+async def _store_uploaded_paper(
+    file: UploadFile, settings
+) -> PaperUploadResponse:
     upload_directory = _upload_directory(settings.database_path)
     try:
         staged = await stage_pdf_upload(
@@ -238,6 +240,35 @@ async def upload_paper(file: UploadFile = File(...)) -> PaperUploadResponse:
         if connection is not None:
             connection.close()
         await file.close()
+
+
+@router.post("/upload", status_code=201, response_model=PaperUploadResponse)
+async def upload_paper(file: UploadFile = File(...)) -> PaperUploadResponse:
+    return await _store_uploaded_paper(file, get_settings())
+
+
+@router.post(
+    "/upload-batch", status_code=201, response_model=PaperBatchUploadResponse
+)
+async def upload_papers(files: list[UploadFile] = File(...)) -> PaperBatchUploadResponse:
+    """Upload multiple PDFs, reporting each success or rejection independently."""
+    settings = get_settings()
+    uploaded: list[PaperUploadResponse] = []
+    rejected: list[PaperUploadRejectedResponse] = []
+    for file in files:
+        file_name = file.filename or "upload.pdf"
+        try:
+            uploaded.append(await _store_uploaded_paper(file, settings))
+        except ApiError as exc:
+            rejected.append(
+                PaperUploadRejectedResponse(
+                    file_name=file_name,
+                    code=exc.code,
+                    message=exc.message,
+                    existing_paper_id=exc.details.get("existing_paper_id"),
+                )
+            )
+    return PaperBatchUploadResponse(uploaded=uploaded, rejected=rejected)
 
 
 @router.post(

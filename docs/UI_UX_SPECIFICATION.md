@@ -19,9 +19,16 @@ only if the project continues past this MVP.
 ## Pages
 
 ### Upload
-File uploader (PDF only), shows validation errors inline, triggers
-`/papers/upload` then `/papers/{id}/process`, shows a progress indicator
-driven by polling `/papers/{id}/status`.
+Multi-file uploader (PDF only) sends selected files to `/papers/upload-batch`,
+shows per-file success or validation errors inline, and leaves uploaded papers
+ready to process from the Papers page.
+
+### AI configuration
+The sidebar provides a password-style API-key placeholder. After saving, only
+a saved status is shown; the key is retained in Streamlit session memory and is
+not written to the database or displayed again. Hosted-provider execution
+still requires the backend provider settings (`AI_MODEL_NAME` and
+`AI_BASE_URL`).
 
 ### Papers (list)
 Table of papers with status badges; click-through to Paper Detail.

@@ -12,6 +12,15 @@ Multipart file upload (PDF only).
 - 413 -> file exceeds `MAX_UPLOAD_SIZE_MB`
 - 409 -> duplicate file_hash, includes `existing_paper_id`
 
+### POST /papers/upload-batch
+Multipart upload of one or more PDF files using repeated `files` fields.
+Each file is validated and stored independently so a rejected file does not
+prevent other files in the same request from being uploaded.
+- 201 -> `{ "uploaded": [...], "rejected": [...] }`
+- `uploaded` items use the same shape as `/papers/upload`.
+- `rejected` items contain `file_name`, `code`, `message`, and optional
+  `existing_paper_id`.
+
 ### GET /papers
 Returns `{ "papers": [...] }` with id, title, file_name, status, created_at,
 updated_at, and `pending_review_count`. Papers are ordered newest first.

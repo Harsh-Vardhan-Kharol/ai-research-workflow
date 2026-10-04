@@ -173,3 +173,14 @@ class ResearchFlowApi:
             "POST", "/papers/upload", files={"file": (file_name, file_obj, "application/pdf")}
         )
         return self._require_keys(data, "id", "status", "file_name")
+
+    def upload_papers(self, files: list[tuple[str, BinaryIO]]) -> dict[str, Any]:
+        multipart_files = [
+            ("files", (file_name, file_obj, "application/pdf"))
+            for file_name, file_obj in files
+        ]
+        data = self._request("POST", "/papers/upload-batch", files=multipart_files)
+        self._require_keys(data, "uploaded", "rejected")
+        if not isinstance(data["uploaded"], list) or not isinstance(data["rejected"], list):
+            raise ApiClientError("The backend returned malformed batch upload data.")
+        return data

@@ -13,6 +13,18 @@ class PaperUploadResponse(BaseModel):
     file_name: str
 
 
+class PaperUploadRejectedResponse(BaseModel):
+    file_name: str
+    code: str
+    message: str
+    existing_paper_id: int | None = None
+
+
+class PaperBatchUploadResponse(BaseModel):
+    uploaded: list[PaperUploadResponse]
+    rejected: list[PaperUploadRejectedResponse]
+
+
 class PaperProcessResponse(BaseModel):
     status: str
 

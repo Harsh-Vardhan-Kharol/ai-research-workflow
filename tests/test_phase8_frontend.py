@@ -68,6 +68,23 @@ def test_api_client_reports_http_and_connection_errors_safely():
         ResearchFlowApi(session=malformed).list_papers()
 
 
+def test_api_client_uploads_multiple_papers_in_one_request():
+    body = {
+        "uploaded": [{"id": 1, "status": "UPLOADED", "file_name": "a.pdf"}],
+        "rejected": [{"file_name": "b.pdf", "code": "DUPLICATE_PAPER", "message": "duplicate"}],
+    }
+    session = FakeSession(FakeResponse(body=body))
+    api = ResearchFlowApi("http://api.local", session=session)
+
+    result = api.upload_papers([("a.pdf", b"a"), ("b.pdf", b"b")])
+
+    assert result == body
+    method, url, kwargs = session.calls[0]
+    assert method == "POST"
+    assert url == "http://api.local/api/v1/papers/upload-batch"
+    assert [part[0] for part in kwargs["files"]] == ["files", "files"]
+
+
 def test_edit_validation_trims_and_enforces_backend_limits():
     assert validate_edit("  corrected  ") == "corrected"
     assert validate_comment("  note ") == "note"

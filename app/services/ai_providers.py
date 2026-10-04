@@ -4,14 +4,32 @@ from __future__ import annotations
 
 import json
 import logging
+import ssl
 import time
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+import certifi
+
 from app.core.config import Settings
 
 logger = logging.getLogger(__name__)
+
+
+def _open_url(request: Request, timeout: int):
+    """Open an HTTPS request with certifi's CA bundle.
+
+    The fallback keeps the adapter compatible with lightweight test doubles
+    that implement the older two-argument ``urlopen`` shape.
+    """
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    try:
+        return urlopen(request, timeout=timeout, context=ssl_context)
+    except TypeError as exc:
+        if "context" not in str(exc):
+            raise
+        return urlopen(request, timeout=timeout)
 
 
 class ProviderError(RuntimeError):
@@ -74,11 +92,12 @@ class HostedAPIAdapter:
                 headers={
                     "Authorization": f"Bearer {settings.ai_api_key}",
                     "Content-Type": "application/json",
+                    "User-Agent": "ResearchFlow/1.0",
                 },
                 method="POST",
             )
             try:
-                with urlopen(request, timeout=settings.ai_timeout_seconds) as response:
+                with _open_url(request, settings.ai_timeout_seconds) as response:
                     response_data = json.loads(response.read().decode("utf-8"))
                 content = response_data["choices"][0]["message"]["content"]
                 if not isinstance(content, str) or not content.strip():
