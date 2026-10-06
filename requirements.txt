@@ -1,6 +1,8 @@
 fastapi==0.111.0
 PyMuPDF==1.28.2
-pydantic==2.7.0
+# 2.7.0 pins an old pydantic-core without wheels for newer hosted Python
+# runtimes, causing Streamlit Community Cloud to attempt a Rust source build.
+pydantic>=2.10,<3
 python-dotenv==1.0.0
 python-multipart==0.0.32
 uvicorn==0.29.0
