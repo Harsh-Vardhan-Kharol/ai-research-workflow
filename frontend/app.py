@@ -15,6 +15,7 @@ if _REPOSITORY_ROOT not in sys.path:
 import streamlit as st
 
 from frontend.api_client import ApiClientError, ResearchFlowApi
+from frontend.local_backend import ensure_backend
 from frontend.components.confidence_display import render_confidence
 from frontend.components.evidence_display import render_evidence
 from frontend.components.extraction_card import group_extractions, render_extraction_identity
@@ -24,8 +25,8 @@ from frontend.components.comparison_view import (
 )
 
 
-def api() -> ResearchFlowApi:
-    return ResearchFlowApi()
+def api(base_url: str) -> ResearchFlowApi:
+    return ResearchFlowApi(base_url)
 
 
 def apply_minimal_theme() -> None:
@@ -431,7 +432,11 @@ def main() -> None:
     apply_minimal_theme()
     render_sidebar_brand()
     render_ai_key_placeholder()
-    client = api()
+    try:
+        client = api(ensure_backend())
+    except (RuntimeError, ValueError) as exc:
+        st.error(f"Backend unavailable: {exc}")
+        return
     st.sidebar.markdown('<div class="rf-eyebrow">Workspace</div>', unsafe_allow_html=True)
     page = st.sidebar.radio(
         "Workspace",

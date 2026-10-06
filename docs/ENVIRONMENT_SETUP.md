@@ -37,6 +37,8 @@ address, for example `RESEARCHFLOW_API_URL=http://127.0.0.1:8000`.
 
 ## Deployment
 
-Out of scope for MVP. This is a local demo tool — no deployment target
-(cloud, Docker, etc.) is required. If deployment is later requested, it
-should be documented as new scope, not assumed here.
+The Streamlit entrypoint starts the bundled FastAPI service automatically when
+`RESEARCHFLOW_API_URL` is not set. This supports a single-process deployment
+such as Streamlit Cloud. For a separately hosted backend, set
+`RESEARCHFLOW_API_URL` to its base URL; the frontend will use that service and
+will not start a local one.
