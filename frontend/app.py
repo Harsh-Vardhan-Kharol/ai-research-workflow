@@ -192,6 +192,21 @@ def _paper_detail(client: ResearchFlowApi, paper_id: int) -> None:
     except ApiClientError as exc:
         show_error(exc)
         return
+    failed_groups = [
+        group for group in groups_response.get("groups", [])
+        if group.get("status") == "FAILED"
+    ]
+    if status.get("status") == "READY" and failed_groups:
+        st.warning(
+            f"{len(failed_groups)} extraction group(s) failed. Correct the AI configuration, then retry processing."
+        )
+        if st.button("Retry failed extraction groups", key=f"retry-failed-{paper_id}"):
+            try:
+                result = client.process_paper(paper_id)
+                st.success(f"Retry started: {result.get('status', 'EXTRACTING_TEXT')}")
+                st.rerun()
+            except ApiClientError as exc:
+                show_error(exc)
     st.divider()
     st.subheader("Paper information")
     st.caption(f"Status: {status.get('status', detail.get('status', 'UNKNOWN'))}")

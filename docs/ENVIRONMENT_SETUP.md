@@ -42,3 +42,16 @@ The Streamlit entrypoint starts the bundled FastAPI service automatically when
 such as Streamlit Cloud. For a separately hosted backend, set
 `RESEARCHFLOW_API_URL` to its base URL; the frontend will use that service and
 will not start a local one.
+
+For Streamlit Cloud, add the AI settings under **Settings → Secrets** using
+TOML keys with these names (the bundled backend loads them automatically):
+
+```toml
+AI_PROVIDER = "hosted"
+AI_API_KEY = "..."
+AI_MODEL_NAME = "openai/gpt-oss-120b"
+AI_BASE_URL = "https://api.groq.com/openai/v1/chat/completions"
+```
+
+The sidebar API-key field is only a session UI placeholder; it does not replace
+the backend deployment secrets.

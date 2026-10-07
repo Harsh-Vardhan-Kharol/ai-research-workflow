@@ -291,6 +291,10 @@ def process_paper(
             and paper["failure_reason"]
             in {"partial_ai_extraction", "partial_evidence_mapping"}
         )
+        retryable_failed_groups = paper["status"] == "READY" and any(
+            row["status"] == "FAILED"
+            for row in get_extraction_groups(connection, paper_id)
+        )
         if paper["status"] in {
             "EXTRACTING_TEXT",
             "TEXT_EXTRACTED",
@@ -300,7 +304,7 @@ def process_paper(
             "MAPPING_EVIDENCE",
             "SCORING_CONFIDENCE",
             "READY",
-        } and not retryable_partial:
+        } and not retryable_partial and not retryable_failed_groups:
             raise ApiError(
                 409,
                 "PROCESSING_CONFLICT",
